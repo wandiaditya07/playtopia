@@ -1,261 +1,356 @@
 <template>
-  <div class="operations-hub-page">
-    <!-- Header Banner -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-4 shadow-sm border">
+  <div class="pt-ops-page">
+    <!-- Top Page Bar -->
+    <div class="pt-page-bar d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
       <div>
-        <div class="d-flex align-items-center gap-2">
-          <h4 class="mb-0 fw-bold text-dark">{{ currentTitle }}</h4>
-          <span class="badge badge-play-sky">Terhubung ke MySQL</span>
-        </div>
-        <small class="text-muted">{{ currentSubtitle }}</small>
+        <h5 class="mb-0 fw-semibold text-dark">{{ currentTitle }}</h5>
+        <div class="text-muted" style="font-size: 12.5px;">{{ currentSubtitle }}</div>
       </div>
-      <div class="d-flex flex-wrap gap-2">
+
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <router-link
+          v-if="section === 'access_logs' || section === 'gates'"
+          to="/app/simulator"
+          class="pt-btn-outline text-decoration-none"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+            <line x1="7" y1="12" x2="17" y2="12" />
+          </svg>
+          <span>Simulator Gate</span>
+        </router-link>
+
         <button
           v-if="section === 'bookings' || section === 'registrations'"
           type="button"
-          class="btn btn-sm btn-play-pink fw-bold"
+          class="pt-btn-outline"
           @click="showBookingModal = true"
         >
-          + Buat Booking Rombongan / Ultah
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Tambah Booking</span>
         </button>
+
         <button
           type="button"
-          class="btn btn-sm btn-outline-primary fw-bold"
+          class="pt-btn-primary"
           :disabled="loading"
           @click="loadAll"
         >
-          {{ loading ? 'Memuat...' : 'Refresh Data' }}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" :class="{ 'pt-spin': loading }">
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          <span>{{ loading ? 'Memuat...' : 'Refresh' }}</span>
         </button>
       </div>
     </div>
 
-    <!-- Section Switcher Pills -->
-    <div class="d-flex flex-wrap gap-2 mb-3">
-      <router-link
-        v-for="nav in navPills"
-        :key="nav.path"
-        :to="nav.path"
-        class="btn btn-sm"
-        :class="route.path === nav.path ? 'btn-play-sky' : 'btn-light border text-dark fw-semibold'"
-      >
-        {{ nav.label }}
-      </router-link>
-    </div>
-
-    <div v-if="feedback" class="alert alert-dismissible mb-3" :class="'alert-' + feedback.type">
+    <!-- Alert Banner -->
+    <div
+      v-if="feedback"
+      class="pt-alert mb-3 d-flex align-items-center justify-content-between"
+      :class="feedback.type === 'danger' ? 'pt-alert-danger' : 'pt-alert-success'"
+    >
       <span>{{ feedback.text }}</span>
-      <button type="button" class="btn-close" @click="feedback = null" />
+      <button type="button" class="btn-close btn-sm" @click="feedback = null" />
     </div>
 
     <!-- 1. ORDERS & PAYMENTS -->
-    <div v-if="section === 'orders' || section === 'payments' || section === 'sales'" class="card">
-      <div class="card-header card-header-sky py-3 d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Riwayat Order, Pembayaran &amp; Rekap Penjualan</span>
-        <span class="badge bg-white text-primary">{{ orders.length }} Transaksi</span>
+    <div v-if="section === 'orders' || section === 'payments' || section === 'sales'" class="pt-panel">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold text-dark">Daftar Transaksi &amp; Pembayaran</span>
+        <span class="pt-tag">{{ orders.length }} Transaksi</span>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>No. Invoice</th>
-                <th>Waktu</th>
-                <th>Kasir</th>
-                <th>Member</th>
-                <th>Metode Bayar</th>
-                <th>Subtotal</th>
-                <th>Diskon</th>
-                <th>Total Bayar</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="orders.length === 0">
-                <td colspan="9" class="text-center text-muted py-4">Belum ada data transaksi.</td>
-              </tr>
-              <tr v-for="o in orders" :key="o.id">
-                <td class="font-monospace fw-bold text-primary">{{ o.order_number }}</td>
-                <td class="small">{{ fmtDateTime(o.created_at) }}</td>
-                <td>{{ o.cashier_name || 'Kasir' }}</td>
-                <td>{{ o.member_name || 'Umum' }}</td>
-                <td><span class="badge badge-play-sky">{{ (o.payment_method || 'CASH').toUpperCase() }}</span></td>
-                <td>{{ rupiah(o.subtotal) }}</td>
-                <td class="text-danger">-{{ rupiah(o.discount_amount) }}</td>
-                <td class="fw-bold text-success">{{ rupiah(o.total) }}</td>
-                <td><span class="badge bg-success">PAID</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="table-responsive">
+        <table class="table pt-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>No. Invoice</th>
+              <th>Waktu</th>
+              <th>Petugas Kasir</th>
+              <th>Pelanggan</th>
+              <th>Metode Bayar</th>
+              <th>Subtotal</th>
+              <th>Diskon</th>
+              <th>Total Bayar</th>
+              <th class="text-end">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="orders.length === 0">
+              <td colspan="9" class="text-center text-muted py-4">Belum ada data transaksi.</td>
+            </tr>
+            <tr v-for="o in orders" :key="o.id">
+              <td class="font-monospace fw-semibold text-dark">{{ o.order_number }}</td>
+              <td class="text-muted" style="font-size: 12.5px;">{{ fmtDateTime(o.created_at) }}</td>
+              <td>{{ o.cashier_name || 'Kasir' }}</td>
+              <td>{{ o.member_name || 'Umum' }}</td>
+              <td>
+                <span class="pt-dir-badge in">{{ (o.payment_method || 'CASH').toUpperCase() }}</span>
+              </td>
+              <td>{{ rupiah(o.subtotal) }}</td>
+              <td class="text-danger">-{{ rupiah(o.discount_amount) }}</td>
+              <td class="fw-semibold text-dark">{{ rupiah(o.total) }}</td>
+              <td class="text-end">
+                <span class="pt-status-badge allowed">Lunas</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- 2. ITEM SALES REPORT -->
-    <div v-else-if="section === 'items'" class="card">
-      <div class="card-header card-header-pink py-3 d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Laporan Penjualan per Item Produk &amp; Paket</span>
-        <span class="badge bg-white text-danger">Tabel: order_items</span>
+    <div v-else-if="section === 'items'" class="pt-panel">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold text-dark">Ringkasan Penjualan per Produk</span>
+        <span class="pt-tag">{{ sysData.item_sales.length }} Item</span>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Nama Produk / Paket</th>
-                <th>Unit Bisnis</th>
-                <th>Total Terjual</th>
-                <th>Total Omset</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="it in sysData.item_sales" :key="it.id">
-                <td class="font-monospace">{{ it.sku }}</td>
-                <td class="fw-bold text-dark">{{ it.name }}</td>
-                <td><span class="badge badge-play-sky">{{ it.unit_name }}</span></td>
-                <td class="fw-bold">{{ it.total_qty }}x</td>
-                <td class="fw-bold text-primary">{{ rupiah(it.total_revenue) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="table-responsive">
+        <table class="table pt-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Kode SKU</th>
+              <th>Nama Produk / Paket</th>
+              <th>Kategori Unit</th>
+              <th> Terjual</th>
+              <th class="text-end">Total Pendapatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="sysData.item_sales.length === 0">
+              <td colspan="5" class="text-center text-muted py-4">Belum ada data penjualan produk.</td>
+            </tr>
+            <tr v-for="it in sysData.item_sales" :key="it.id">
+              <td class="font-monospace text-muted">{{ it.sku }}</td>
+              <td class="fw-semibold text-dark">{{ it.name }}</td>
+              <td><span class="pt-tag">{{ it.unit_name }}</span></td>
+              <td class="fw-medium">{{ it.total_qty }} item</td>
+              <td class="text-end fw-semibold text-dark">{{ rupiah(it.total_revenue) }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- 3. ACCESS LOGS & VISITORS REPORT -->
-    <div v-else-if="section === 'access_logs' || section === 'visitors_report'" class="card">
-      <div class="card-header card-header-violet py-3 d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Log Akses Turnstile Gate &amp; Trafik Kunjungan</span>
-        <router-link to="/app/simulator" class="btn btn-sm btn-light fw-bold text-primary">
-          Buka Simulator Gate
-        </router-link>
+    <template v-else-if="section === 'access_logs' || section === 'visitors_report'">
+      <!-- Summary Metrics -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Total Aktivitas Scan</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-dark">{{ accessLogs.length }}</span>
+              <span class="pt-tag">Semua Jalur</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Akses Diizinkan</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-success">{{ accessLogs.filter(l => l.is_allowed).length }}</span>
+              <span class="pt-status-badge allowed">Valid</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Akses Ditolak</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-danger">{{ accessLogs.filter(l => !l.is_allowed).length }}</span>
+              <span class="pt-status-badge denied">Ditolak</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Rasio Masuk / Keluar</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-dark">
+                {{ accessLogs.filter(l => String(l.direction).toUpperCase() === 'IN').length }}
+                <span class="text-muted fw-normal" style="font-size: 15px;">/ {{ accessLogs.filter(l => String(l.direction).toUpperCase() === 'OUT').length }}</span>
+              </span>
+              <span class="pt-tag">IN / OUT</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="card-body p-0">
+
+      <div class="pt-panel">
+        <div class="pt-panel-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            <span class="fw-semibold text-dark">Daftar Riwayat Scan Turnstile Gate</span>
+            <span class="pt-tag">{{ filteredAccessLogs.length }} Data</span>
+          </div>
+
+          <!-- Clean Filter Controls -->
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <input
+              v-model.trim="logSearch"
+              type="text"
+              class="form-control form-control-sm"
+              style="width: 190px; font-size: 12.5px;"
+              placeholder="Cari kode tiket..."
+            >
+            <select v-model="logDirFilter" class="form-select form-select-sm" style="width: 130px; font-size: 12.5px;">
+              <option value="ALL">Semua Jalur</option>
+              <option value="IN">Masuk (IN)</option>
+              <option value="OUT">Keluar (OUT)</option>
+            </select>
+            <select v-model="logStatusFilter" class="form-select form-select-sm" style="width: 135px; font-size: 12.5px;">
+              <option value="ALL">Semua Status</option>
+              <option value="ALLOWED">Diizinkan</option>
+              <option value="DENIED">Ditolak</option>
+            </select>
+          </div>
+        </div>
+
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table pt-table align-middle mb-0">
             <thead>
               <tr>
-                <th>Waktu Scan</th>
-                <th>Arah Gate</th>
+                <th style="width: 190px;">Waktu Scan</th>
+                <th style="width: 130px;">Jalur Gate</th>
                 <th>Kode Tiket / Kredensial</th>
-                <th>Status Barrier</th>
+                <th style="width: 150px;">Status Gate</th>
                 <th>Keterangan</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="l in accessLogs" :key="l.id">
-                <td class="font-monospace small">{{ fmtDateTime(l.scanned_at) }}</td>
+              <tr v-if="filteredAccessLogs.length === 0">
+                <td colspan="5" class="text-center text-muted py-4">Tidak ada aktivitas scan yang sesuai filter.</td>
+              </tr>
+              <tr v-for="l in filteredAccessLogs" :key="l.id">
+                <td class="font-monospace text-muted" style="font-size: 12.5px;">{{ fmtDateTime(l.scanned_at) }}</td>
                 <td>
-                  <span class="badge" :class="String(l.direction).toUpperCase() === 'IN' ? 'bg-success' : 'bg-danger'">
-                    {{ String(l.direction).toUpperCase() }}
+                  <span class="pt-dir-badge" :class="String(l.direction).toUpperCase() === 'IN' ? 'in' : 'out'">
+                    {{ String(l.direction).toUpperCase() === 'IN' ? 'MASUK (IN)' : 'KELUAR (OUT)' }}
                   </span>
                 </td>
-                <td class="font-monospace fw-bold">{{ l.ticket_code || l.credential_value }}</td>
+                <td class="font-monospace fw-semibold text-dark">{{ l.ticket_code || l.credential_value }}</td>
                 <td>
-                  <span class="badge" :class="l.is_allowed ? 'bg-success' : 'bg-danger'">
-                    {{ l.is_allowed ? 'OPEN_GATE' : 'KEEP_LOCKED' }}
+                  <span class="pt-status-badge" :class="l.is_allowed ? 'allowed' : 'denied'">
+                    {{ l.is_allowed ? 'Diizinkan' : 'Ditolak' }}
                   </span>
                 </td>
-                <td class="small text-muted">{{ l.deny_reason || 'Akses Valid' }}</td>
+                <td class="text-muted" style="font-size: 12.5px;">{{ formatDenyReason(l.deny_reason, l.is_allowed) }}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-    </div>
+    </template>
 
     <!-- 4. GATES & HARDWARE DEVICES -->
     <div v-else-if="section === 'gates'" class="row g-3">
       <div v-for="g in sysData.gates" :key="g.id" class="col-md-6">
-        <div class="card p-4 h-100">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="badge badge-play-sky font-monospace">{{ g.code }}</span>
-            <span class="badge bg-success">ONLINE &middot; READY</span>
+        <div class="pt-panel p-3 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="pt-tag font-monospace">{{ g.code }}</span>
+              <span class="pt-status-badge allowed">Online</span>
+            </div>
+            <h6 class="fw-semibold text-dark mb-1">{{ g.name }}</h6>
+            <div class="text-muted" style="font-size: 12.5px;">
+              Jalur: <strong class="text-dark">{{ g.direction.toUpperCase() }}</strong> &middot; Lokasi: {{ g.location || 'Pintu Utama' }}
+            </div>
           </div>
-          <h5 class="fw-bold text-dark">{{ g.name }}</h5>
-          <p class="small text-muted mb-3">
-            Arah: <strong>{{ g.direction.toUpperCase() }}</strong> &middot; Lokasi: {{ g.location || 'Main Entrance' }}
-          </p>
-          <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
-            <span class="small text-muted">Heartbeat terakhir: {{ g.last_heartbeat_at ? fmtDateTime(g.last_heartbeat_at) : 'Baru saja' }}</span>
-            <router-link to="/app/simulator" class="btn btn-sm btn-play-sky">Uji Scan →</router-link>
+
+          <div class="d-flex justify-content-between align-items-center pt-3 mt-3 border-top">
+            <span class="text-muted" style="font-size: 12px;">
+              Sinkronisasi terakhir: {{ g.last_heartbeat_at ? fmtDateTime(g.last_heartbeat_at) : 'Baru saja' }}
+            </span>
+            <router-link to="/app/simulator" class="pt-btn-outline text-decoration-none" style="padding: 5px 11px; font-size: 12px;">
+              Uji Gate
+            </router-link>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 5. BOOKINGS & ONLINE REGISTRATIONS -->
-    <div v-else-if="section === 'bookings' || section === 'registrations'" class="card">
-      <div class="card-header card-header-pink py-3 d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Reservasi Rombongan, Ulang Tahun &amp; Registrasi Online</span>
-        <span class="badge bg-white text-danger">{{ bookings.length }} Jadwal</span>
+    <div v-else-if="section === 'bookings' || section === 'registrations'" class="pt-panel">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold text-dark">Daftar Reservasi &amp; Booking Rombongan</span>
+        <span class="pt-tag">{{ bookings.length }} Jadwal</span>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Kode Booking</th>
-                <th>Nama Pemesan</th>
-                <th>No. HP</th>
-                <th>Tanggal &amp; Jam</th>
-                <th>Jumlah Anak</th>
-                <th>Total Biaya</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="bookings.length === 0">
-                <td colspan="7" class="text-center text-muted py-4">
-                  Belum ada jadwal booking rombongan. Klik tombol "+ Buat Booking" di kanan atas.
-                </td>
-              </tr>
-              <tr v-for="b in bookings" :key="b.id">
-                <td class="font-monospace fw-bold text-primary">{{ b.booking_code }}</td>
-                <td class="fw-bold text-dark">{{ b.customer_name }}</td>
-                <td>{{ b.customer_phone }}</td>
-                <td>{{ b.booking_date }} ({{ b.start_time }} - {{ b.end_time }})</td>
-                <td><span class="badge badge-play-sky">{{ b.guest_count }} Anak</span></td>
-                <td class="fw-bold text-primary">{{ rupiah(b.total) }}</td>
-                <td><span class="badge bg-success">{{ b.status.toUpperCase() }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="table-responsive">
+        <table class="table pt-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Kode Booking</th>
+              <th>Nama Pemesan</th>
+              <th>No. Telepon</th>
+              <th>Jadwal Kunjungan</th>
+              <th>Jumlah Peserta</th>
+              <th>Total Biaya</th>
+              <th class="text-end">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="bookings.length === 0">
+              <td colspan="7" class="text-center text-muted py-4">
+                Belum ada jadwal reservasi rombongan.
+              </td>
+            </tr>
+            <tr v-for="b in bookings" :key="b.id">
+              <td class="font-monospace fw-semibold text-dark">{{ b.booking_code }}</td>
+              <td class="fw-medium text-dark">{{ b.customer_name }}</td>
+              <td>{{ b.customer_phone }}</td>
+              <td>{{ b.booking_date }} ({{ b.start_time }} - {{ b.end_time }})</td>
+              <td><span class="pt-tag">{{ b.guest_count }} Anak</span></td>
+              <td class="fw-semibold text-dark">{{ rupiah(b.total) }}</td>
+              <td class="text-end">
+                <span class="pt-status-badge allowed">{{ b.status.toUpperCase() }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- 6. OUTLETS & OPERATIONAL SETTINGS -->
     <div v-else-if="section === 'outlets' || section === 'settings'" class="row g-3">
       <div class="col-lg-5">
-        <div class="card h-100">
-          <div class="card-header card-header-sky py-3">
-            <strong class="text-white">Cabang Outlet Playtopia</strong>
+        <div class="pt-panel h-100">
+          <div class="pt-panel-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold text-dark">Daftar Cabang Outlet</span>
+            <span class="pt-tag">{{ sysData.outlets.length }} Cabang</span>
           </div>
-          <div class="card-body">
-            <div v-for="o in sysData.outlets" :key="o.id" class="p-3 rounded-3 border bg-light mb-2">
-              <div class="d-flex justify-content-between">
-                <strong class="text-dark">{{ o.name }}</strong>
-                <span class="badge badge-play-sky font-monospace">{{ o.code }}</span>
+          <div class="p-3 d-flex flex-column gap-2">
+            <div v-for="o in sysData.outlets" :key="o.id" class="p-3 rounded-2 border bg-light">
+              <div class="d-flex justify-content-between align-items-center">
+                <strong class="text-dark" style="font-size: 13.5px;">{{ o.name }}</strong>
+                <span class="pt-tag font-monospace">{{ o.code }}</span>
               </div>
-              <div class="small text-muted mt-1">{{ o.address }}, {{ o.city }}</div>
-              <div class="small text-primary mt-1">{{ o.phone }} &middot; {{ o.timezone }}</div>
+              <div class="text-muted mt-1" style="font-size: 12.5px;">{{ o.address }}, {{ o.city }}</div>
+              <div class="text-muted mt-1" style="font-size: 12px;">{{ o.phone }} &middot; {{ o.timezone }}</div>
             </div>
           </div>
         </div>
       </div>
+
       <div class="col-lg-7">
-        <div class="card h-100">
-          <div class="card-header card-header-amber py-3 d-flex justify-content-between align-items-center">
-            <strong>Parameter Operasional Playground &amp; Gate</strong>
-            <button type="button" class="btn btn-sm btn-light fw-bold" :disabled="saving" @click="saveSettings">
-              Simpan Parameter
+        <div class="pt-panel h-100">
+          <div class="pt-panel-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold text-dark">Parameter Operasional</span>
+            <button type="button" class="pt-btn-primary" style="padding: 5px 12px; font-size: 12px;" :disabled="saving" @click="saveSettings">
+              {{ saving ? 'Menyimpan...' : 'Simpan Perubahan' }}
             </button>
           </div>
-          <div class="card-body">
+          <div class="p-3">
             <div v-for="(s, idx) in sysData.settings" :key="idx" class="mb-3">
-              <label class="form-label small fw-bold text-uppercase text-muted">{{ s.key_name }}</label>
-              <input v-model="s.value_jsonStr" type="text" class="form-control font-monospace">
+              <label class="form-label fw-semibold text-secondary mb-1" style="font-size: 12px;">{{ s.key_name }}</label>
+              <input v-model="s.value_jsonStr" type="text" class="form-control font-monospace" style="font-size: 13px;">
             </div>
           </div>
         </div>
@@ -263,80 +358,79 @@
     </div>
 
     <!-- 7. AUDIT LOGS -->
-    <div v-else class="card">
-      <div class="card-header card-header-violet py-3">
-        <strong>Audit Log Keamanan &amp; Aktivitas Sistem</strong>
+    <div v-else class="pt-panel">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold text-dark">Log Audit Aktivitas</span>
+        <span class="pt-tag">{{ sysData.audit_logs.length }} Catatan</span>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Waktu</th>
-                <th>User</th>
-                <th>Aksi</th>
-                <th>Entitas</th>
-                <th>IP Address</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="sysData.audit_logs.length === 0">
-                <td colspan="5" class="text-center text-muted py-4">Belum ada log audit.</td>
-              </tr>
-              <tr v-for="a in sysData.audit_logs" :key="a.id">
-                <td class="small">{{ fmtDateTime(a.created_at) }}</td>
-                <td class="fw-bold">{{ a.user_name || 'System' }}</td>
-                <td><span class="badge badge-play-sky">{{ a.action }}</span></td>
-                <td class="font-monospace small">{{ a.entity_type }} #{{ a.entity_id }}</td>
-                <td class="font-monospace small text-muted">{{ a.ip_address || '127.0.0.1' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="table-responsive">
+        <table class="table pt-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Waktu</th>
+              <th>Pengguna</th>
+              <th>Aksi</th>
+              <th>Entitas</th>
+              <th class="text-end">Alamat IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="sysData.audit_logs.length === 0">
+              <td colspan="5" class="text-center text-muted py-4">Belum ada catatan aktivitas.</td>
+            </tr>
+            <tr v-for="a in sysData.audit_logs" :key="a.id">
+              <td class="text-muted" style="font-size: 12.5px;">{{ fmtDateTime(a.created_at) }}</td>
+              <td class="fw-medium text-dark">{{ a.user_name || 'Sistem' }}</td>
+              <td><span class="pt-tag">{{ a.action }}</span></td>
+              <td class="font-monospace text-muted" style="font-size: 12.5px;">{{ a.entity_type }} #{{ a.entity_id }}</td>
+              <td class="font-monospace text-muted text-end" style="font-size: 12.5px;">{{ a.ip_address || '127.0.0.1' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- Modal Booking -->
-    <div v-if="showBookingModal" class="pos-backdrop">
-      <div class="card pos-dialog" style="max-width: 480px;">
-        <div class="card-header card-header-pink py-3 d-flex justify-content-between align-items-center">
-          <strong>Buat Booking Rombongan / Ulang Tahun</strong>
-          <button type="button" class="btn-close btn-close-white" @click="showBookingModal = false" />
+    <div v-if="showBookingModal" class="pt-modal-backdrop">
+      <div class="pt-panel" style="max-width: 460px; width: 100%;">
+        <div class="pt-panel-header d-flex justify-content-between align-items-center">
+          <span class="fw-semibold text-dark">Tambah Booking Rombongan</span>
+          <button type="button" class="btn-close btn-sm" @click="showBookingModal = false" />
         </div>
-        <div class="card-body">
+        <div class="p-3">
           <div class="mb-2">
-            <label class="form-label small fw-bold">Nama Pemesan / Sekolah / Keluarga</label>
-            <input v-model.trim="bookingForm.customer_name" type="text" class="form-control" placeholder="TK Harapan Bangsa / Ibu Siska">
+            <label class="form-label small fw-semibold">Nama Pemesan / Instansi</label>
+            <input v-model.trim="bookingForm.customer_name" type="text" class="form-control" placeholder="Nama pemesan atau sekolah">
           </div>
           <div class="row g-2 mb-2">
             <div class="col-6">
-              <label class="form-label small fw-bold">No. WhatsApp</label>
+              <label class="form-label small fw-semibold">No. Telepon</label>
               <input v-model.trim="bookingForm.customer_phone" type="text" class="form-control" placeholder="0812...">
             </div>
             <div class="col-6">
-              <label class="form-label small fw-bold">Tanggal Kunjungan</label>
+              <label class="form-label small fw-semibold">Tanggal Kunjungan</label>
               <input v-model="bookingForm.booking_date" type="date" class="form-control">
             </div>
           </div>
           <div class="row g-2 mb-3">
             <div class="col-6">
-              <label class="form-label small fw-bold">Jumlah Anak</label>
-              <input v-model.number="bookingForm.guest_count" type="number" min="5" class="form-control fw-bold">
+              <label class="form-label small fw-semibold">Jumlah Peserta</label>
+              <input v-model.number="bookingForm.guest_count" type="number" min="5" class="form-control">
             </div>
             <div class="col-6">
-              <label class="form-label small fw-bold">Total Biaya Paket (Rp)</label>
-              <input v-model.number="bookingForm.total" type="number" step="100000" class="form-control fw-bold">
+              <label class="form-label small fw-semibold">Total Biaya (Rp)</label>
+              <input v-model.number="bookingForm.total" type="number" step="100000" class="form-control">
             </div>
           </div>
           <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-outline-secondary" @click="showBookingModal = false">Batal</button>
+            <button type="button" class="pt-btn-outline" @click="showBookingModal = false">Batal</button>
             <button
               type="button"
-              class="btn btn-play-pink fw-bold"
+              class="pt-btn-primary"
               :disabled="!bookingForm.customer_name || !bookingForm.customer_phone || saving"
               @click="createBooking"
             >
-              ✓ Simpan Booking
+              {{ saving ? 'Menyimpan...' : 'Simpan Booking' }}
             </button>
           </div>
         </div>
@@ -352,19 +446,6 @@ import { api } from '@/utils/posApi'
 import { rupiah, fmtDateTime } from '@/utils/format'
 
 const route = useRoute()
-
-const navPills = [
-  { path: '/app/orders', label: 'Orders' },
-  { path: '/app/payments', label: 'Payments' },
-  { path: '/app/access/logs', label: 'Access Logs' },
-  { path: '/app/gates', label: 'Gate Devices' },
-  { path: '/app/bookings', label: 'Group Bookings' },
-  { path: '/app/reports/sales', label: 'Sales Report' },
-  { path: '/app/reports/items', label: 'Item Sales' },
-  { path: '/app/system/outlets', label: 'Outlets' },
-  { path: '/app/system/settings', label: 'Settings' },
-  { path: '/app/system/audit-logs', label: 'Audit Logs' }
-]
 
 const section = computed(() => {
   const p = route.path
@@ -384,25 +465,39 @@ const section = computed(() => {
 
 const currentTitle = computed(() => {
   const map = {
-    orders: 'Riwayat Pesanan & Invoice POS',
-    payments: 'Rekonsiliasi Pembayaran (Cash, QRIS, EDC, Wallet)',
+    orders: 'Daftar Transaksi POS',
+    payments: 'Rekonsiliasi Pembayaran',
     access_logs: 'Riwayat Scan Turnstile Gate',
-    gates: 'Konfigurasi Perangkat Tripod Turnstile Gate',
-    bookings: 'Reservasi Rombongan & Ulang Tahun',
+    gates: 'Perangkat Turnstile Gate',
+    bookings: 'Booking Rombongan',
     registrations: 'Registrasi Tiket Online',
-    sales: 'Laporan Penjualan Harian & Shift',
-    items: 'Laporan Penjualan per Produk & Paket',
-    visitors_report: 'Laporan Kunjungan & Durasi Bermain',
-    outlets: 'Daftar Cabang Outlet Playtopia',
-    settings: 'Pengaturan Operasional Sistem',
-    audit: 'Log Audit Aktivitas & Keamanan'
+    sales: 'Laporan Penjualan',
+    items: 'Penjualan per Produk & Paket',
+    visitors_report: 'Laporan Kunjungan',
+    outlets: 'Cabang Outlet',
+    settings: 'Pengaturan Operasional',
+    audit: 'Log Audit Aktivitas'
   }
   return map[section.value] || 'Operasional Playtopia'
 })
 
-const currentSubtitle = computed(() =>
-  'Data terintegrasi langsung dengan database MySQL playtopia_id sesuai hak akses role Anda.'
-)
+const currentSubtitle = computed(() => {
+  const map = {
+    orders: 'Riwayat invoice penjualan tiket playground dan transaksi cafe',
+    payments: 'Rekapitulasi penerimaan pembayaran tunai, QRIS, kartu EDC, dan saldo member',
+    access_logs: 'Catatan aktivitas pemindaian tiket masuk dan keluar pada perangkat gate',
+    gates: 'Status koneksi dan konfigurasi jalur perangkat turnstile gate',
+    bookings: 'Manajemen jadwal reservasi grup, sekolah, dan acara ulang tahun',
+    registrations: 'Daftar pemesanan dan registrasi tiket kunjungan secara daring',
+    sales: 'Ringkasan transaksi penjualan harian dan rekapitulasi shift',
+    items: 'Performa penjualan berdasarkan masing-masing paket tiket dan produk',
+    visitors_report: 'Rekapitulasi trafik kunjungan dan durasi bermain pengunjung',
+    outlets: 'Informasi lokasi dan jam operasional cabang Playtopia',
+    settings: 'Konfigurasi parameter waktu bermain, toleransi, dan aturan sistem',
+    audit: 'Riwayat perubahan data dan aktivitas pengguna di dalam sistem'
+  }
+  return map[section.value] || 'Manajemen operasional Playtopia'
+})
 
 const loading = ref(false)
 const saving = ref(false)
@@ -410,6 +505,34 @@ const feedback = ref(null)
 const orders = ref([])
 const accessLogs = ref([])
 const bookings = ref([])
+const logSearch = ref('')
+const logDirFilter = ref('ALL')
+const logStatusFilter = ref('ALL')
+
+const filteredAccessLogs = computed(() => {
+  return accessLogs.value.filter(l => {
+    const code = String(l.ticket_code || l.credential_value || '').toLowerCase()
+    if (logSearch.value && !code.includes(logSearch.value.toLowerCase())) return false
+    const dir = String(l.direction || '').toUpperCase()
+    if (logDirFilter.value !== 'ALL' && dir !== logDirFilter.value) return false
+    if (logStatusFilter.value === 'ALLOWED' && !l.is_allowed) return false
+    if (logStatusFilter.value === 'DENIED' && l.is_allowed) return false
+    return true
+  })
+})
+
+function formatDenyReason(reason, isAllowed) {
+  if (isAllowed) return 'Akses valid'
+  const map = {
+    TICKET_NOT_FOUND: 'Tiket tidak ditemukan',
+    OVERTIME: 'Melewati batas durasi bermain (Overtime)',
+    REENTRY_LIMIT_EXCEEDED: 'Melebihi batas kuota re-entry',
+    ALREADY_INSIDE: 'Pengunjung tercatat masih di dalam area',
+    NOT_INSIDE: 'Tiket belum tercatat masuk area',
+    EXPIRED: 'Masa berlaku tiket telah habis'
+  }
+  return map[reason] || reason || 'Akses ditolak'
+}
 const sysData = reactive({
   outlets: [],
   gates: [],
@@ -461,7 +584,7 @@ async function createBooking() {
   try {
     await api('/admin/bookings', { method: 'POST', body: { ...bookingForm } })
     showBookingModal.value = false
-    feedback.value = { type: 'success', text: `Booking untuk ${bookingForm.customer_name} berhasil dijadwalkan!` }
+    feedback.value = { type: 'success', text: `Jadwal booking untuk ${bookingForm.customer_name} berhasil disimpan.` }
     await loadAll()
   } catch (err) {
     feedback.value = { type: 'danger', text: err.message }
@@ -479,7 +602,7 @@ async function saveSettings() {
         body: { key_name: s.key_name, value_json: s.value_jsonStr }
       })
     }
-    feedback.value = { type: 'success', text: 'Parameter operasional berhasil disimpan.' }
+    feedback.value = { type: 'success', text: 'Parameter operasional berhasil diperbarui.' }
   } catch (err) {
     feedback.value = { type: 'danger', text: err.message }
   } finally {
@@ -490,3 +613,186 @@ async function saveSettings() {
 onMounted(loadAll)
 </script>
 
+<style scoped>
+.pt-ops-page {
+  max-width: 1400px;
+}
+
+.pt-page-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.pt-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.pt-stat-val {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pt-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-outline:hover {
+  background: #f8fafc;
+  color: #0284c7;
+  border-color: #94a3b8;
+}
+
+.pt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #0284c7;
+  border: 1px solid #0284c7;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-primary:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.pt-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pt-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pt-alert-success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.pt-alert-danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.pt-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pt-panel-header {
+  padding: 13px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.pt-tag {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+.pt-table th {
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 11px 16px;
+}
+
+.pt-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+}
+
+.pt-dir-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+}
+
+.pt-dir-badge.in {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.pt-dir-badge.out {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.pt-status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+}
+
+.pt-status-badge.allowed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pt-status-badge.denied {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1055;
+  padding: 16px;
+}
+
+@keyframes pt-spin {
+  to { transform: rotate(360deg); }
+}
+
+.pt-spin {
+  animation: pt-spin 0.8s linear infinite;
+}
+</style>
