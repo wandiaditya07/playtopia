@@ -851,7 +851,14 @@ async function submitTransaction() {
 
     receipt.value = res.data
     showPayment.value = false
-    channel?.postMessage({ type: 'PAYMENT_SUCCESS', invoice_number: res.data.invoice_number, total_amount: res.data.total_amount })
+    channel?.postMessage({
+      type: 'PAYMENT_SUCCESS',
+      invoice_number: res.data.invoice_number,
+      total_amount: res.data.total_amount,
+      cash_given: paymentMethod.value === 'CASH' ? (Number(cashGiven.value) || 0) : null,
+      cash_change: paymentMethod.value === 'CASH' ? Math.max(0, cashChange.value) : null,
+      payment_method: paymentMethod.value
+    })
 
     cart.value = []
     clearMember()
@@ -871,10 +878,16 @@ function broadcastCart() {
     type: 'UPDATE_CART',
     items: cart.value.map(i => ({ name: i.name, category: i.category, price: i.price, qty: i.qty, duration_minutes: i.duration_minutes })),
     customer_name: member.value?.name || '',
+    member_balance: member.value?.balance ?? null,
+    member_discount_pct: member.value?.discount_pct ?? null,
+    subtotal: cartSubtotal.value,
     total_amount: cartTotal.value,
     discount_amount: discountAmount.value,
     payment_method: showPayment.value ? paymentMethod.value : null,
-    qris_data: showPayment.value && paymentMethod.value === 'QRIS' ? `PLAYTOPIA-QRIS-SANDBOX|${cartTotal.value}` : null
+    cash_given: showPayment.value && paymentMethod.value === 'CASH' ? (Number(cashGiven.value) || 0) : null,
+    cash_change: showPayment.value && paymentMethod.value === 'CASH' ? Math.max(0, cashChange.value) : null,
+    qris_data: showPayment.value && paymentMethod.value === 'QRIS' ? `PLAYTOPIA-QRIS-SANDBOX|${cartTotal.value}` : null,
+    cashier_name: auth.user?.name || 'Kasir'
   })
 }
 
