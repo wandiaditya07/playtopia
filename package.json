@@ -16,7 +16,11 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "node": "node server.js",
-    "test:tooling": "node --test tests/tooling.test.js"
+    "test:tooling": "node --test tests/tooling.test.js",
+    "git:validate": "node scripts/git-guard.mjs validate",
+    "git:local": "node scripts/git-guard.mjs local",
+    "git:public": "node scripts/git-guard.mjs public",
+    "git:backups": "node scripts/git-guard.mjs restore-list"
   },
   "dependencies": {
     "@amcharts/amcharts4": "^4.10.39",
