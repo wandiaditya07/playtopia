@@ -8,6 +8,21 @@
       </div>
 
       <div class="d-flex flex-wrap align-items-center gap-2">
+        <button
+          v-if="canExport"
+          type="button"
+          class="pt-btn-outline"
+          title="Ekspor Data ke Format CSV / Excel"
+          @click="handleExport"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Ekspor CSV</span>
+        </button>
+
         <router-link
           v-if="section === 'access_logs' || section === 'gates'"
           to="/app/simulator"
@@ -607,6 +622,124 @@ async function saveSettings() {
     feedback.value = { type: 'danger', text: err.message }
   } finally {
     saving.value = false
+  }
+}
+
+const canExport = computed(() => {
+  return ['orders', 'payments', 'sales', 'items', 'access_logs', 'visitors_report', 'bookings', 'registrations', 'audit'].includes(section.value)
+})
+
+function downloadCsv(filename, headers, rows) {
+  const escapeCell = (val) => {
+    if (val === null || val === undefined) return '""'
+    const str = String(val).replace(/"/g, '""')
+    return `"${str}"`
+  }
+  const csvContent = '\uFEFF' + [
+    headers.map(escapeCell).join(','),
+    ...rows.map(r => r.map(escapeCell).join(','))
+  ].join('\r\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.setAttribute('download', `${filename}-${new Date().toISOString().slice(0, 10)}.csv`)
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function handleExport() {
+  try {
+    if (['orders', 'payments', 'sales'].includes(section.value)) {
+      if (orders.value.length === 0) {
+        feedback.value = { type: 'danger', text: 'Tidak ada data transaksi untuk diekspor.' }
+        return
+      }
+      const headers = ['No. Invoice', 'Waktu Transaksi', 'Kasir', 'Pelanggan', 'Metode Bayar', 'Subtotal (Rp)', 'Diskon (Rp)', 'Total Bayar (Rp)', 'Status']
+      const rows = orders.value.map(o => [
+        o.order_number,
+        fmtDateTime(o.created_at),
+        o.cashier_name || 'Kasir',
+        o.member_name || 'Umum',
+        (o.payment_method || 'CASH').toUpperCase(),
+        o.subtotal || 0,
+        o.discount_amount || 0,
+        o.total || 0,
+        'Lunas'
+      ])
+      downloadCsv('Playtopia-Laporan-Transaksi', headers, rows)
+      feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} data transaksi ke file CSV!` }
+    } else if (section.value === 'items') {
+      if (sysData.item_sales.length === 0) {
+        feedback.value = { type: 'danger', text: 'Tidak ada data penjualan item untuk diekspor.' }
+        return
+      }
+      const headers = ['SKU Produk', 'Nama Produk / Paket', 'Kategori Unit', 'Qty Terjual', 'Total Pendapatan (Rp)']
+      const rows = sysData.item_sales.map(it => [
+        it.sku,
+        it.name,
+        it.unit_name,
+        it.total_qty || 0,
+        it.total_revenue || 0
+      ])
+      downloadCsv('Playtopia-Penjualan-Item', headers, rows)
+      feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} data produk ke file CSV!` }
+    } else if (['access_logs', 'visitors_report'].includes(section.value)) {
+      if (filteredAccessLogs.value.length === 0) {
+        feedback.value = { type: 'danger', text: 'Tidak ada log aktivitas scan gate untuk diekspor.' }
+        return
+      }
+      const headers = ['Waktu Scan', 'Jalur Gate', 'Kode Tiket / Kredensial', 'Status Akses', 'Keterangan Validasi']
+      const rows = filteredAccessLogs.value.map(l => [
+        fmtDateTime(l.scanned_at),
+        String(l.direction).toUpperCase() === 'IN' ? 'MASUK (IN)' : 'KELUAR (OUT)',
+        l.ticket_code || l.credential_value,
+        l.is_allowed ? 'Diizinkan' : 'Ditolak',
+        formatDenyReason(l.deny_reason, l.is_allowed)
+      ])
+      downloadCsv('Playtopia-Riwayat-Scan-Gate', headers, rows)
+      feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} data riwayat scan ke file CSV!` }
+    } else if (['bookings', 'registrations'].includes(section.value)) {
+      if (bookings.value.length === 0) {
+        feedback.value = { type: 'danger', text: 'Tidak ada data jadwal booking untuk diekspor.' }
+        return
+      }
+      const headers = ['Kode Booking', 'Nama Pemesan', 'No. Telepon', 'Tanggal Kunjungan', 'Jam Mulai', 'Jam Selesai', 'Jumlah Peserta', 'Total Biaya (Rp)', 'Status']
+      const rows = bookings.value.map(b => [
+        b.booking_code,
+        b.customer_name,
+        b.customer_phone,
+        b.booking_date,
+        b.start_time || '10:00',
+        b.end_time || '13:00',
+        b.guest_count || 0,
+        b.total || 0,
+        (b.status || 'CONFIRMED').toUpperCase()
+      ])
+      downloadCsv('Playtopia-Jadwal-Booking', headers, rows)
+      feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} data booking ke file CSV!` }
+    } else if (section.value === 'audit') {
+      if (sysData.audit_logs.length === 0) {
+        feedback.value = { type: 'danger', text: 'Tidak ada data log audit untuk diekspor.' }
+        return
+      }
+      const headers = ['Waktu Aktivitas', 'Pengguna', 'Aksi', 'Tipe Entitas', 'ID Entitas', 'Alamat IP']
+      const rows = sysData.audit_logs.map(a => [
+        fmtDateTime(a.created_at),
+        a.user_name || 'Sistem',
+        a.action,
+        a.entity_type,
+        a.entity_id,
+        a.ip_address || '127.0.0.1'
+      ])
+      downloadCsv('Playtopia-Log-Audit-Sistem', headers, rows)
+      feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} catatan audit ke file CSV!` }
+    }
+  } catch (err) {
+    feedback.value = { type: 'danger', text: 'Gagal mengekspor data: ' + err.message }
   }
 }
 
