@@ -1,12 +1,12 @@
 <template>
   <div class="system-roles-page">
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-4 shadow-sm border">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-3 shadow-sm border">
       <div>
         <div class="d-flex align-items-center gap-2">
-          <h4 class="mb-0 fw-bold text-dark">
-            🛡️ Manajemen Role &amp; Pemisahan Grup Menu (RBAC)
-          </h4>
+          <h5 class="mb-0 fw-bold text-dark">
+            Manajemen Role &amp; Pemisahan Grup Menu (RBAC)
+          </h5>
           <span class="badge badge-play-sky">Real-Time Database</span>
         </div>
         <small class="text-muted">
@@ -16,19 +16,19 @@
       <div class="d-flex gap-2">
         <button
           type="button"
-          class="btn btn-sm fw-bold"
-          :class="activeTab === 'matrix' ? 'btn-play-sky' : 'btn-outline-primary'"
+          class="btn btn-sm fw-semibold"
+          :class="activeTab === 'matrix' ? 'btn-primary' : 'btn-outline-primary'"
           @click="activeTab = 'matrix'"
         >
-          🔐 Matriks Permission per Role
+          Matriks Permission per Role
         </button>
         <button
           type="button"
-          class="btn btn-sm fw-bold"
-          :class="activeTab === 'menus' ? 'btn-play-pink' : 'btn-outline-primary'"
+          class="btn btn-sm fw-semibold"
+          :class="activeTab === 'menus' ? 'btn-primary' : 'btn-outline-primary'"
           @click="activeTab = 'menus'"
         >
-          📂 Struktur Grup Menu ({{ menus.length }})
+          Struktur Grup Menu ({{ menus.length }})
         </button>
       </div>
     </div>
@@ -64,7 +64,7 @@
                 </span>
               </div>
               <h5 class="fw-bold text-dark mb-1">
-                {{ r.name === 'Admin' ? '🛡️ Admin (Konfigurasi Penuh)' : r.name === 'Client' ? '👑 Client / Owner (Bisnis & Laporan)' : '🧑‍💼 Staff / Kasir (Operasional POS)' }}
+                {{ r.name === 'Admin' ? 'Admin (Konfigurasi Penuh)' : r.name === 'Client' ? 'Client / Owner (Bisnis & Laporan)' : 'Staff / Kasir (Operasional POS)' }}
               </h5>
               <small class="text-muted">{{ r.description }}</small>
             </button>
@@ -88,7 +88,7 @@
                 :disabled="saving"
                 @click="toggleAllForRole(true)"
               >
-                ✓ Centang Semua Read
+                Centang Semua Read
               </button>
               <button
                 type="button"
@@ -97,7 +97,7 @@
                 @click="saveRolePermissions"
               >
                 <span v-if="saving" class="spinner-border spinner-border-sm me-1" />
-                {{ saving ? 'Menyimpan...' : '💾 Simpan Permission Role Ini' }}
+                {{ saving ? 'Menyimpan...' : 'Simpan Permission Role Ini' }}
               </button>
             </div>
           </div>
@@ -110,10 +110,10 @@
                     <th style="min-width: 260px;">Grup Menu / Modul</th>
                     <th>Kode Menu</th>
                     <th>Route URL</th>
-                    <th class="text-center">👁️ Tampil (Read)</th>
-                    <th class="text-center">➕ Tambah (Create)</th>
-                    <th class="text-center">✏️ Ubah (Update)</th>
-                    <th class="text-center">🗑️ Hapus (Delete)</th>
+                    <th class="text-center">Tampil (Read)</th>
+                    <th class="text-center">Tambah (Create)</th>
+                    <th class="text-center">Ubah (Update)</th>
+                    <th class="text-center">Hapus (Delete)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -121,7 +121,7 @@
                     <!-- Group Header Row -->
                     <tr class="table-info">
                       <td class="fw-bold text-dark">
-                        📂 GRUP: {{ group.label }}
+                        GRUP: {{ group.label }}
                       </td>
                       <td class="font-monospace small">{{ group.code }}</td>
                       <td class="font-monospace small text-muted">{{ group.route || '(Group Container)' }}</td>
@@ -414,3 +414,4 @@ async function saveMenuRow(m) {
 
 onMounted(loadMatrix)
 </script>
+
