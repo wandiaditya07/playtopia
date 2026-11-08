@@ -1,169 +1,180 @@
 <template>
-  <div class="catalog-manager-page">
-    <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-3 shadow-sm border">
+  <div class="pt-catalog-page">
+    <!-- Top Page Bar -->
+    <div class="pt-page-bar d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
       <div>
-        <h5 class="mb-0 fw-bold text-dark">
-          Katalog Produk, Paket Bermain &amp; Unit Bisnis
+        <h5 class="mb-0 fw-semibold text-dark">
+          {{ activeTab === 'units' ? 'Unit Bisnis' : 'Produk & Paket Bermain' }}
         </h5>
-        <small class="text-muted">
-          Kelola paket tiket Playground (durasi, grace period, re-entry, denda overtime) serta menu Cafe &amp; Snack.
-        </small>
+        <div class="text-muted" style="font-size: 12.5px;">
+          {{
+            activeTab === 'units'
+              ? 'Daftar divisi unit bisnis yang terhubung dengan transaksi POS'
+              : 'Pengaturan harga paket durasi playground, kuota re-entry, dan menu cafe'
+          }}
+        </div>
       </div>
-      <div class="d-flex flex-wrap gap-2">
+
+      <div class="d-flex flex-wrap align-items-center gap-2">
         <button
+          v-if="activeTab === 'products'"
           type="button"
-          class="btn btn-sm fw-semibold"
-          :class="activeTab === 'products' ? 'btn-primary' : 'btn-outline-primary'"
-          @click="activeTab = 'products'"
-        >
-          Produk &amp; Paket ({{ products.length }})
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm fw-semibold"
-          :class="activeTab === 'units' ? 'btn-primary' : 'btn-outline-primary'"
-          @click="activeTab = 'units'"
-        >
-          Unit Bisnis ({{ businessUnits.length }})
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm btn-success fw-semibold"
+          class="pt-btn-primary"
           :disabled="!auth.can('catalog.products', 'create')"
           @click="openCreateModal"
         >
-          + Tambah Produk / Paket
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Tambah Produk</span>
+        </button>
+
+        <button
+          type="button"
+          class="pt-btn-outline"
+          @click="loadCatalog"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          <span>Refresh</span>
         </button>
       </div>
     </div>
 
-    <div v-if="feedback" class="alert alert-dismissible mb-3" :class="'alert-' + feedback.type">
+    <div
+      v-if="feedback"
+      class="pt-alert mb-3 d-flex align-items-center justify-content-between"
+      :class="feedback.type === 'danger' ? 'pt-alert-danger' : 'pt-alert-success'"
+    >
       <span>{{ feedback.text }}</span>
-      <button type="button" class="btn-close" @click="feedback = null" />
+      <button type="button" class="btn-close btn-sm" @click="feedback = null" />
     </div>
 
     <!-- TAB 1: PRODUCTS -->
-    <div v-if="activeTab === 'products'" class="card">
-      <div class="card-header card-header-sky py-3 d-flex justify-content-between align-items-center">
-        <span class="fw-bold">Daftar Produk Playground &amp; Cafe</span>
-        <span class="badge bg-white text-primary">Tabel: products &amp; ticket_package_rules</span>
+    <div v-if="activeTab === 'products'" class="pt-panel">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold text-dark">Katalog Produk &amp; Paket Durasi</span>
+        <span class="pt-tag">{{ products.length }} Item</span>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Nama Produk / Paket</th>
-                <th>Unit Bisnis</th>
-                <th>Aturan Durasi &amp; Gate</th>
-                <th>Harga Jual</th>
-                <th>Status</th>
-                <th class="text-end">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in products" :key="p.id">
-                <td class="font-monospace small fw-bold text-primary">{{ p.sku }}</td>
-                <td>
-                  <div class="fw-bold text-dark">{{ p.name }}</div>
-                  <small class="text-muted">{{ p.description }}</small>
-                </td>
-                <td>
-                  <span
-                    class="badge"
-                    :class="p.unit_code === 'PLAYGROUND' ? 'badge-play-sky' : p.unit_code === 'CAFE' ? 'badge-play-pink' : 'badge-play-amber'"
-                  >
-                    {{ p.unit_name }}
+      <div class="table-responsive">
+        <table class="table pt-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Kode SKU</th>
+              <th>Nama Produk / Paket</th>
+              <th>Unit Bisnis</th>
+              <th>Parameter Durasi &amp; Gate</th>
+              <th>Harga Jual</th>
+              <th>Status</th>
+              <th class="text-end">Tindakan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="products.length === 0">
+              <td colspan="7" class="text-center text-muted py-4">Belum ada produk atau paket.</td>
+            </tr>
+            <tr v-for="p in products" :key="p.id">
+              <td class="font-monospace fw-semibold text-dark">{{ p.sku }}</td>
+              <td>
+                <div class="fw-medium text-dark">{{ p.name }}</div>
+                <div class="text-muted" style="font-size: 12px;">{{ p.description }}</div>
+              </td>
+              <td>
+                <span class="pt-dir-badge" :class="p.unit_code === 'PLAYGROUND' ? 'in' : 'out'">
+                  {{ p.unit_name }}
+                </span>
+              </td>
+              <td>
+                <template v-if="p.item_type === 'ticket_package' || p.unit_code === 'PLAYGROUND'">
+                  <span class="pt-tag me-1">
+                    {{ p.is_open_play ? 'Sepuasnya' : (p.duration_minutes || 60) + ' Menit' }}
                   </span>
-                </td>
-                <td>
-                  <template v-if="p.item_type === 'ticket_package' || p.unit_code === 'PLAYGROUND'">
-                    <span class="badge badge-play-amber me-1">
-                      ⏱️ {{ p.is_open_play ? 'Sepuasnya' : (p.duration_minutes || 60) + ' mnt' }}
-                    </span>
-                    <span class="badge badge-play-mint">
-                      Re-entry {{ p.max_reentry || 2 }}x
-                    </span>
-                  </template>
-                  <span v-else class="text-muted small">Item Langsung (F&amp;B)</span>
-                </td>
-                <td class="fw-bold text-primary fs-6">{{ rupiah(p.base_price) }}</td>
-                <td>
-                  <span class="badge" :class="p.is_active ? 'bg-success' : 'bg-secondary'">
-                    {{ p.is_active ? 'AKTIF' : 'NONAKTIF' }}
+                  <span class="pt-tag">
+                    Re-entry {{ p.max_reentry || 2 }}x
                   </span>
-                </td>
-                <td class="text-end">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-primary"
-                    :disabled="!auth.can('catalog.products', 'update')"
-                    @click="openEditModal(p)"
-                  >
-                    ✏️ Edit
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </template>
+                <span v-else class="text-muted" style="font-size: 12px;">Produk Langsung</span>
+              </td>
+              <td class="fw-semibold text-dark">{{ rupiah(p.base_price) }}</td>
+              <td>
+                <span class="pt-status-badge" :class="p.is_active ? 'allowed' : 'denied'">
+                  {{ p.is_active ? 'Aktif' : 'Nonaktif' }}
+                </span>
+              </td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="pt-btn-outline"
+                  style="padding: 5px 11px; font-size: 12px;"
+                  :disabled="!auth.can('catalog.products', 'update')"
+                  @click="openEditModal(p)"
+                >
+                  Ubah
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <!-- TAB 2: BUSINESS UNITS -->
     <div v-else class="row g-3">
       <div v-for="bu in businessUnits" :key="bu.id" class="col-md-4">
-        <div class="card h-100 p-3">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="badge badge-play-sky font-monospace">{{ bu.code }}</span>
-            <span class="badge bg-success">Aktif</span>
+        <div class="pt-panel p-3 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="pt-tag font-monospace">{{ bu.code }}</span>
+              <span class="pt-status-badge allowed">Aktif</span>
+            </div>
+            <h6 class="fw-semibold text-dark mb-1">{{ bu.name }}</h6>
+            <p class="text-muted mb-3" style="font-size: 12.5px;">
+              Tercatat dalam invoice POS terpadu dengan pemisahan laporan omset per unit.
+            </p>
           </div>
-          <h5 class="fw-bold text-dark">{{ bu.name }}</h5>
-          <p class="text-muted small mb-3">
-            Unit bisnis terintegrasi dalam 1 invoice POS Playtopia dan terpisah otomatis pada laporan closing shift.
-          </p>
-          <div class="mt-auto pt-2 border-top d-flex justify-content-between small">
-            <span class="text-muted">Jumlah Produk:</span>
-            <strong class="text-primary">{{ products.filter(p => p.business_unit_id === bu.id).length }} item</strong>
+          <div class="pt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 12.5px;">
+            <span class="text-muted">Total Produk Terdaftar</span>
+            <strong class="text-dark">{{ products.filter(p => p.business_unit_id === bu.id).length }} Item</strong>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Modal Produk -->
-    <div v-if="showModal" class="pos-backdrop">
-      <div class="card pos-dialog" style="max-width: 560px;">
-        <div class="card-header card-header-sky py-3 d-flex justify-content-between align-items-center">
-          <strong>{{ editingItem ? '✏️ Edit Produk / Paket' : '➕ Tambah Produk / Paket Baru' }}</strong>
-          <button type="button" class="btn-close btn-close-white" @click="showModal = false" />
+    <div v-if="showModal" class="pt-modal-backdrop">
+      <div class="pt-panel" style="max-width: 540px; width: 100%;">
+        <div class="pt-panel-header d-flex justify-content-between align-items-center">
+          <span class="fw-semibold text-dark">{{ editingItem ? 'Ubah Produk / Paket' : 'Tambah Produk / Paket Baru' }}</span>
+          <button type="button" class="btn-close btn-sm" @click="showModal = false" />
         </div>
-        <div class="card-body">
+        <div class="p-3">
           <div class="row g-2 mb-3">
             <div class="col-sm-8">
-              <label class="form-label small fw-bold">Nama Produk / Paket</label>
-              <input v-model.trim="form.name" type="text" class="form-control" placeholder="Contoh: Paket Bermain 3 Jam">
+              <label class="form-label small fw-semibold">Nama Produk / Paket</label>
+              <input v-model.trim="form.name" type="text" class="form-control" placeholder="Nama paket atau produk">
             </div>
             <div class="col-sm-4">
-              <label class="form-label small fw-bold">Kategori Unit</label>
+              <label class="form-label small fw-semibold">Kategori Unit</label>
               <select v-model="form.category" class="form-select">
-                <option value="PLAYGROUND">🎡 Playground</option>
-                <option value="CAFE">☕ Cafe F&amp;B</option>
+                <option value="PLAYGROUND">Playground</option>
+                <option value="CAFE">Cafe F&amp;B</option>
               </select>
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-bold">Deskripsi Singkat</label>
-            <input v-model.trim="form.description" type="text" class="form-control" placeholder="Keterangan paket / menu">
+            <label class="form-label small fw-semibold">Deskripsi</label>
+            <input v-model.trim="form.description" type="text" class="form-control" placeholder="Keterangan singkat">
           </div>
           <div class="row g-2 mb-3">
             <div class="col-sm-6">
-              <label class="form-label small fw-bold">Harga Jual (Rp)</label>
-              <input v-model.number="form.base_price" type="number" min="0" step="1000" class="form-control fw-bold">
+              <label class="form-label small fw-semibold">Harga Jual (Rp)</label>
+              <input v-model.number="form.base_price" type="number" min="0" step="1000" class="form-control fw-semibold">
             </div>
             <div v-if="form.category === 'PLAYGROUND'" class="col-sm-6">
-              <label class="form-label small fw-bold">Durasi Bermain (Menit)</label>
+              <label class="form-label small fw-semibold">Durasi Bermain (Menit)</label>
               <input
                 v-model.number="form.duration_minutes"
                 type="number"
@@ -174,35 +185,35 @@
               >
             </div>
           </div>
-          <div v-if="form.category === 'PLAYGROUND'" class="p-3 rounded-3 bg-light border mb-3">
+          <div v-if="form.category === 'PLAYGROUND'" class="p-3 rounded-2 bg-light border mb-3">
             <div class="form-check form-switch mb-2">
               <input id="open-play" v-model="form.is_open_play" type="checkbox" class="form-check-input">
-              <label for="open-play" class="form-check-label fw-bold small">Tiket Bermain Sepuasnya (All-Day Open Play)</label>
+              <label for="open-play" class="form-check-label fw-semibold small">Paket Bermain Sepuasnya (All-Day)</label>
             </div>
             <div class="row g-2">
               <div class="col-sm-4">
-                <label class="form-label small">Grace Period (Mnt)</label>
+                <label class="form-label small text-muted mb-1">Toleransi (Mnt)</label>
                 <input v-model.number="form.grace_period_minutes" type="number" class="form-control form-control-sm">
               </div>
               <div class="col-sm-4">
-                <label class="form-label small">Maks Re-entry</label>
+                <label class="form-label small text-muted mb-1">Maks Re-entry</label>
                 <input v-model.number="form.max_reentry" type="number" class="form-control form-control-sm">
               </div>
               <div class="col-sm-4">
-                <label class="form-label small">Denda Overtime/30m</label>
+                <label class="form-label small text-muted mb-1">Biaya Overtime</label>
                 <input v-model.number="form.overtime_block_price" type="number" class="form-control form-control-sm">
               </div>
             </div>
           </div>
           <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-outline-secondary" @click="showModal = false">Batal</button>
+            <button type="button" class="pt-btn-outline" @click="showModal = false">Batal</button>
             <button
               type="button"
-              class="btn btn-play-sky fw-bold"
+              class="pt-btn-primary"
               :disabled="!form.name || form.base_price < 0 || saving"
               @click="submitProduct"
             >
-              {{ saving ? 'Menyimpan...' : '✓ Simpan Produk' }}
+              {{ saving ? 'Menyimpan...' : 'Simpan Produk' }}
             </button>
           </div>
         </div>
@@ -316,3 +327,165 @@ async function submitProduct() {
 onMounted(loadCatalog)
 </script>
 
+<style scoped>
+.pt-catalog-page {
+  max-width: 1400px;
+}
+
+.pt-page-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.pt-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-outline:hover {
+  background: #f8fafc;
+  color: #0284c7;
+  border-color: #94a3b8;
+}
+
+.pt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #0284c7;
+  border: 1px solid #0284c7;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-primary:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.pt-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pt-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pt-alert-success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.pt-alert-danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.pt-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pt-panel-header {
+  padding: 13px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.pt-tag {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+.pt-table th {
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 11px 16px;
+}
+
+.pt-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+}
+
+.pt-dir-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+}
+
+.pt-dir-badge.in {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.pt-dir-badge.out {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.pt-status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+}
+
+.pt-status-badge.allowed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pt-status-badge.denied {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1055;
+  padding: 16px;
+}
+</style>

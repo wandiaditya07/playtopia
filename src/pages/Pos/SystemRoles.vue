@@ -1,41 +1,47 @@
 <template>
-  <div class="system-roles-page">
-    <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-3 shadow-sm border">
+  <div class="pt-roles-page">
+    <!-- Top Page Bar -->
+    <div class="pt-page-bar d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
       <div>
-        <div class="d-flex align-items-center gap-2">
-          <h5 class="mb-0 fw-bold text-dark">
-            Manajemen Role &amp; Pemisahan Grup Menu (RBAC)
-          </h5>
-          <span class="badge badge-play-sky">Real-Time Database</span>
+        <h5 class="mb-0 fw-semibold text-dark">
+          {{ activeTab === 'menus' ? 'Struktur Menu' : 'Role & Hak Akses' }}
+        </h5>
+        <div class="text-muted" style="font-size: 12.5px;">
+          {{
+            activeTab === 'menus'
+              ? 'Pengaturan urutan, label, dan status aktif modul navigasi'
+              : 'Pengaturan otorisasi akses menu berdasarkan masing-masing role pengguna'
+          }}
         </div>
-        <small class="text-muted">
-          Atur hak akses (Read, Create, Update, Delete) setiap Role per Grup Menu. Perubahan langsung memperbarui menu sidebar secara dinamis.
-        </small>
       </div>
-      <div class="d-flex gap-2">
+
+      <div class="d-flex flex-wrap align-items-center gap-2">
         <button
           type="button"
-          class="btn btn-sm fw-semibold"
-          :class="activeTab === 'matrix' ? 'btn-primary' : 'btn-outline-primary'"
+          class="pt-btn-outline"
+          :class="{ 'active-tab': activeTab === 'matrix' }"
           @click="activeTab = 'matrix'"
         >
-          Matriks Permission per Role
+          Matriks Hak Akses
         </button>
         <button
           type="button"
-          class="btn btn-sm fw-semibold"
-          :class="activeTab === 'menus' ? 'btn-primary' : 'btn-outline-primary'"
+          class="pt-btn-outline"
+          :class="{ 'active-tab': activeTab === 'menus' }"
           @click="activeTab = 'menus'"
         >
-          Struktur Grup Menu ({{ menus.length }})
+          Struktur Menu ({{ menus.length }})
         </button>
       </div>
     </div>
 
-    <div v-if="feedback" class="alert alert-dismissible mb-3" :class="'alert-' + feedback.type">
+    <div
+      v-if="feedback"
+      class="pt-alert mb-3 d-flex align-items-center justify-content-between"
+      :class="feedback.type === 'danger' ? 'pt-alert-danger' : 'pt-alert-success'"
+    >
       <span>{{ feedback.text }}</span>
-      <button type="button" class="btn-close" @click="feedback = null" />
+      <button type="button" class="btn-close btn-sm" @click="feedback = null" />
     </div>
 
     <!-- TAB 1: ROLE PERMISSION MATRIX -->
@@ -50,227 +56,179 @@
           >
             <button
               type="button"
-              class="card w-100 text-start p-3 transition-all"
-              :class="selectedRoleId === r.id ? 'border-primary shadow-md bg-info-subtle' : 'bg-white'"
-              style="border-width: 2px;"
+              class="pt-role-card w-100 text-start"
+              :class="{ active: selectedRoleId === r.id }"
               @click="selectedRoleId = r.id"
             >
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="badge" :class="r.id === 2 ? 'badge-play-sky' : r.id === 1 ? 'badge-play-amber' : 'badge-play-pink'">
-                  Role ID #{{ r.id }}
-                </span>
-                <span class="small fw-bold text-primary">
-                  {{ countEnabledMenus(r.id) }} / {{ menus.length }} Menu Aktif
+                <span class="pt-tag">Role #{{ r.id }}</span>
+                <span class="text-muted" style="font-size: 12px;">
+                  <strong class="text-dark">{{ countEnabledMenus(r.id) }}</strong> / {{ menus.length }} Modul
                 </span>
               </div>
-              <h5 class="fw-bold text-dark mb-1">
-                {{ r.name === 'Admin' ? 'Admin (Konfigurasi Penuh)' : r.name === 'Client' ? 'Client / Owner (Bisnis & Laporan)' : 'Staff / Kasir (Operasional POS)' }}
-              </h5>
-              <small class="text-muted">{{ r.description }}</small>
+              <div class="fw-semibold text-dark" style="font-size: 14.5px;">
+                {{ r.name === 'Admin' ? 'Administrator' : r.name === 'Client' ? 'Owner / Client' : 'Staff / Kasir' }}
+              </div>
+              <div class="text-muted mt-1" style="font-size: 12px;">{{ r.description }}</div>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Permission Matrix grouped by Menu Group -->
+      <!-- Permission Matrix Table -->
       <div class="col-12">
-        <div class="card">
-          <div class="card-header card-header-sky py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-              <strong class="fs-6">
-                Daftar Grup Menu &amp; Hak Akses untuk Role: {{ selectedRole?.name }}
-              </strong>
-            </div>
+        <div class="pt-panel">
+          <div class="pt-panel-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span class="fw-semibold text-dark">
+              Konfigurasi Hak Akses Role: {{ selectedRole?.name }}
+            </span>
+
             <div class="d-flex gap-2">
               <button
                 type="button"
-                class="btn btn-sm btn-light fw-bold text-primary"
+                class="pt-btn-outline"
+                style="padding: 5px 11px; font-size: 12px;"
                 :disabled="saving"
                 @click="toggleAllForRole(true)"
               >
-                Centang Semua Read
+                Pilih Semua Lihat
               </button>
               <button
                 type="button"
-                class="btn btn-sm btn-warning fw-bold text-dark shadow-sm"
+                class="pt-btn-primary"
+                style="padding: 5px 13px; font-size: 12px;"
                 :disabled="saving || !auth.can('system.roles', 'update')"
                 @click="saveRolePermissions"
               >
-                <span v-if="saving" class="spinner-border spinner-border-sm me-1" />
-                {{ saving ? 'Menyimpan...' : 'Simpan Permission Role Ini' }}
+                {{ saving ? 'Menyimpan...' : 'Simpan Perubahan' }}
               </button>
             </div>
           </div>
 
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th style="min-width: 260px;">Grup Menu / Modul</th>
-                    <th>Kode Menu</th>
-                    <th>Route URL</th>
-                    <th class="text-center">Tampil (Read)</th>
-                    <th class="text-center">Tambah (Create)</th>
-                    <th class="text-center">Ubah (Update)</th>
-                    <th class="text-center">Hapus (Delete)</th>
+          <div class="table-responsive">
+            <table class="table pt-table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th style="min-width: 260px;">Modul / Grup Menu</th>
+                  <th>Kode</th>
+                  <th>Path URL</th>
+                  <th class="text-center">Lihat</th>
+                  <th class="text-center">Tambah</th>
+                  <th class="text-center">Ubah</th>
+                  <th class="text-center">Hapus</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="group in groupedMenus" :key="group.id">
+                  <tr class="pt-group-row">
+                    <td class="fw-semibold text-dark">{{ group.label }}</td>
+                    <td class="font-monospace text-muted" style="font-size: 12px;">{{ group.code }}</td>
+                    <td class="font-monospace text-muted" style="font-size: 12px;">{{ group.route || '-' }}</td>
+                    <td class="text-center">
+                      <input v-model="permMap[group.id].can_read" type="checkbox" class="form-check-input">
+                    </td>
+                    <td class="text-center">
+                      <input v-model="permMap[group.id].can_create" type="checkbox" class="form-check-input">
+                    </td>
+                    <td class="text-center">
+                      <input v-model="permMap[group.id].can_update" type="checkbox" class="form-check-input">
+                    </td>
+                    <td class="text-center">
+                      <input v-model="permMap[group.id].can_delete" type="checkbox" class="form-check-input">
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  <template v-for="group in groupedMenus" :key="group.id">
-                    <!-- Group Header Row -->
-                    <tr class="table-info">
-                      <td class="fw-bold text-dark">
-                        GRUP: {{ group.label }}
-                      </td>
-                      <td class="font-monospace small">{{ group.code }}</td>
-                      <td class="font-monospace small text-muted">{{ group.route || '(Group Container)' }}</td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[group.id].can_read"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[group.id].can_create"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[group.id].can_update"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[group.id].can_delete"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                    </tr>
 
-                    <!-- Child Menu Rows -->
-                    <tr
-                      v-for="child in group.children"
-                      :key="child.id"
-                    >
-                      <td class="ps-4">
-                        <span class="text-primary me-1">↳</span>
-                        <strong class="text-dark">{{ child.label }}</strong>
-                      </td>
-                      <td class="font-monospace small text-muted">{{ child.code }}</td>
-                      <td class="font-monospace small text-primary">{{ child.route }}</td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[child.id].can_read"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[child.id].can_create"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[child.id].can_update"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                      <td class="text-center">
-                        <input
-                          v-model="permMap[child.id].can_delete"
-                          type="checkbox"
-                          class="form-check-input"
-                        >
-                      </td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
-            </div>
+                  <tr v-for="child in group.children" :key="child.id">
+                    <td class="ps-4 text-dark">{{ child.label }}</td>
+                    <td class="font-monospace text-muted" style="font-size: 12px;">{{ child.code }}</td>
+                    <td class="font-monospace text-muted" style="font-size: 12px;">{{ child.route }}</td>
+                    <td class="text-center">
+                      <input v-model="permMap[child.id].can_read" type="checkbox" class="form-check-input">
+                    </td>
+                    <td class="text-center">
+                      <input v-model="permMap[child.id].can_create" type="checkbox" class="form-check-input">
+                    </td>
+                    <td class="text-center">
+                      <input v-model="permMap[child.id].can_update" type="checkbox" class="form-check-input">
+                    </td>
+                    <td class="text-center">
+                      <input v-model="permMap[child.id].can_delete" type="checkbox" class="form-check-input">
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
 
     <!-- TAB 2: STRUKTUR GRUP MENU -->
-    <div v-else class="card">
-      <div class="card-header card-header-pink py-3 d-flex justify-content-between align-items-center">
-        <span class="fw-bold">📂 Pengaturan Label, Urutan &amp; Status Aktif Menu</span>
-        <span class="badge bg-white text-danger">Tabel: menus</span>
+    <div v-else class="pt-panel">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold text-dark">Daftar Modul &amp; Struktur Navigasi</span>
+        <span class="pt-tag">{{ menus.length }} Modul</span>
       </div>
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Tipe</th>
-                <th>Label Menu</th>
-                <th>Kode</th>
-                <th>Urutan (Sort)</th>
-                <th>Status Aktif</th>
-                <th class="text-end">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="m in menus" :key="m.id">
-                <td>#{{ m.id }}</td>
-                <td>
-                  <span class="badge" :class="m.is_group ? 'badge-play-sky' : 'badge-play-mint'">
-                    {{ m.is_group ? 'GRUP INDUK' : 'SUB-MENU' }}
-                  </span>
-                </td>
-                <td>
+      <div class="table-responsive">
+        <table class="table pt-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width: 70px;">ID</th>
+              <th style="width: 120px;">Tipe</th>
+              <th>Nama Modul</th>
+              <th>Kode</th>
+              <th style="width: 110px;">Urutan</th>
+              <th style="width: 140px;">Status</th>
+              <th class="text-end" style="width: 110px;">Tindakan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="m in menus" :key="m.id">
+              <td class="text-muted">#{{ m.id }}</td>
+              <td>
+                <span class="pt-dir-badge" :class="m.is_group ? 'in' : 'out'">
+                  {{ m.is_group ? 'GRUP' : 'MODUL' }}
+                </span>
+              </td>
+              <td>
+                <input
+                  v-model="m.label"
+                  type="text"
+                  class="form-control form-control-sm fw-medium"
+                >
+              </td>
+              <td class="font-monospace text-muted" style="font-size: 12px;">{{ m.code }}</td>
+              <td>
+                <input
+                  v-model.number="m.sort_order"
+                  type="number"
+                  class="form-control form-control-sm"
+                >
+              </td>
+              <td>
+                <div class="form-check form-switch mb-0">
                   <input
-                    v-model="m.label"
-                    type="text"
-                    class="form-control form-control-sm fw-bold"
+                    v-model="m.is_active_bool"
+                    type="checkbox"
+                    class="form-check-input"
                   >
-                </td>
-                <td class="font-monospace small">{{ m.code }}</td>
-                <td style="width: 110px;">
-                  <input
-                    v-model.number="m.sort_order"
-                    type="number"
-                    class="form-control form-control-sm"
-                  >
-                </td>
-                <td>
-                  <div class="form-check form-switch">
-                    <input
-                      v-model="m.is_active_bool"
-                      type="checkbox"
-                      class="form-check-input"
-                    >
-                    <label class="form-check-label small">{{ m.is_active_bool ? 'Aktif' : 'Nonaktif' }}</label>
-                  </div>
-                </td>
-                <td class="text-end">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-play-sky"
-                    :disabled="savingMenuId === m.id"
-                    @click="saveMenuRow(m)"
-                  >
-                    {{ savingMenuId === m.id ? '...' : 'Simpan' }}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  <label class="form-check-label small">{{ m.is_active_bool ? 'Aktif' : 'Nonaktif' }}</label>
+                </div>
+              </td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="pt-btn-outline"
+                  style="padding: 4px 10px; font-size: 12px;"
+                  :disabled="savingMenuId === m.id"
+                  @click="saveMenuRow(m)"
+                >
+                  {{ savingMenuId === m.id ? '...' : 'Simpan' }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -289,12 +247,11 @@ const activeTab = ref(route.path.includes('/menus') ? 'menus' : 'matrix')
 const roles = ref([])
 const menus = ref([])
 const permissionsRaw = ref([])
-const selectedRoleId = ref(2) // default Admin
+const selectedRoleId = ref(2)
 const saving = ref(false)
 const savingMenuId = ref(null)
 const feedback = ref(null)
 
-// Reactive map: { [menu_id]: { can_read, can_create, can_update, can_delete } }
 const permMap = reactive({})
 
 const selectedRole = computed(() => roles.value.find(r => r.id === selectedRoleId.value))
@@ -352,7 +309,7 @@ async function loadMatrix() {
       syncPermMapForRole(selectedRoleId.value)
     }
   } catch (err) {
-    feedback.value = { type: 'danger', text: err.message || 'Gagal memuat matriks role.' }
+    feedback.value = { type: 'danger', text: err.message || 'Gagal memuat matriks hak akses.' }
   }
 }
 
@@ -381,7 +338,7 @@ async function saveRolePermissions() {
       await auth.refreshMenus()
       feedback.value = {
         type: 'success',
-        text: `Hak akses untuk role ${selectedRole.value?.name} berhasil disimpan & sidebar diperbarui!`
+        text: `Hak akses untuk role ${selectedRole.value?.name} berhasil diperbarui.`
       }
     }
   } catch (err) {
@@ -404,7 +361,7 @@ async function saveMenuRow(m) {
       }
     })
     await auth.refreshMenus()
-    feedback.value = { type: 'success', text: `Menu "${m.label}" berhasil diperbarui.` }
+    feedback.value = { type: 'success', text: `Modul "${m.label}" berhasil diperbarui.` }
   } catch (err) {
     feedback.value = { type: 'danger', text: err.message }
   } finally {
@@ -415,3 +372,164 @@ async function saveMenuRow(m) {
 onMounted(loadMatrix)
 </script>
 
+<style scoped>
+.pt-roles-page {
+  max-width: 1400px;
+}
+
+.pt-page-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.pt-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-outline:hover {
+  background: #f8fafc;
+  color: #0284c7;
+  border-color: #94a3b8;
+}
+
+.pt-btn-outline.active-tab {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #7dd3fc;
+  font-weight: 600;
+}
+
+.pt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  background: #0284c7;
+  border: 1px solid #0284c7;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-primary:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.pt-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pt-role-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: all 0.15s ease;
+}
+
+.pt-role-card:hover {
+  border-color: #94a3b8;
+}
+
+.pt-role-card.active {
+  border-color: #0284c7;
+  background: #f8fdff;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+}
+
+.pt-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pt-alert-success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.pt-alert-danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.pt-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pt-panel-header {
+  padding: 13px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.pt-tag {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+.pt-table th {
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 11px 16px;
+}
+
+.pt-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+}
+
+.pt-group-row td {
+  background: #f8fafc;
+}
+
+.pt-dir-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+}
+
+.pt-dir-badge.in {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.pt-dir-badge.out {
+  background: #f1f5f9;
+  color: #334155;
+}
+</style>
