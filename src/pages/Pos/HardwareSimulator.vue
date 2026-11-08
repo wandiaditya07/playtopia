@@ -1,277 +1,308 @@
 <template>
-  <div class="hardware-simulator-page p-3">
-    <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-3 shadow-sm border">
+  <div class="pt-sim-page">
+    <!-- Top Page Bar -->
+    <div class="pt-page-bar d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
       <div>
-        <div class="d-flex align-items-center gap-2">
-          <h4 class="mb-0 fw-bold text-dark">
-            🎡 Simulator Hardware Turnstile &amp; Gate
-          </h4>
-          <span class="badge bg-warning text-dark fw-bold">SANDBOX HARDWARE</span>
+        <h5 class="mb-0 fw-semibold text-dark">Simulator Turnstile Gate</h5>
+        <div class="text-muted" style="font-size: 12.5px;">
+          Kontrol pengujian akses masuk, keluar, dan validasi tiket
         </div>
-        <small class="text-muted">
-          Simulasikan respon barrier tripod turnstile, reader QR/RFID, deteksi overtime, kontrol re-entry, dan notifikasi WhatsApp secara virtual tanpa alat fisik.
-        </small>
       </div>
-      <div class="d-flex gap-2">
-        <router-link to="/app/pos" class="btn btn-outline-primary btn-sm fw-semibold">
-          🛒 Ke Kasir POS
+
+      <div class="d-flex align-items-center gap-2">
+        <router-link to="/app/pos" class="pt-btn-outline text-decoration-none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg>
+          <span>Kasir POS</span>
         </router-link>
+
         <button
           type="button"
-          class="btn btn-primary btn-sm fw-semibold d-flex align-items-center gap-1"
+          class="pt-btn-primary"
           :disabled="refreshing"
           @click="refreshAll"
         >
-          <span v-if="refreshing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
-          <span>{{ refreshing ? 'Memuat...' : '🔄 Refresh Data' }}</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" :class="{ 'pt-spin': refreshing }">
+            <polyline points="23 4 23 10 17 10" />
+            <polyline points="1 20 1 14 7 14" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          <span>{{ refreshing ? 'Memuat...' : 'Refresh' }}</span>
         </button>
       </div>
     </div>
 
-    <!-- Alert status -->
+    <!-- Alert Banner -->
     <div
       v-if="notice"
-      class="alert alert-dismissible mb-3 shadow-sm"
-      :class="notice.type === 'error' ? 'alert-danger' : 'alert-success'"
+      class="pt-alert mb-3 d-flex align-items-center justify-content-between"
+      :class="notice.type === 'error' ? 'pt-alert-danger' : 'pt-alert-success'"
       role="alert"
     >
-      <strong>{{ notice.type === 'error' ? 'Perhatian:' : 'Berhasil:' }}</strong> {{ notice.text }}
-      <button
-        type="button"
-        class="btn-close"
-        aria-label="Tutup"
-        @click="notice = null"
-      />
+      <div class="d-flex align-items-center gap-2">
+        <svg v-if="notice.type === 'error'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+        <span>{{ notice.text }}</span>
+      </div>
+      <button type="button" class="btn-close btn-sm" aria-label="Tutup" @click="notice = null" />
     </div>
 
-    <!-- Main Layout -->
+    <!-- Main 2-Column Grid -->
     <div class="row g-3">
-      <!-- Kolom Kiri: Visual Turnstile & Kontrol Scan -->
+      <!-- Left Column: Gate Terminal & Scan Controls -->
       <div class="col-lg-6">
-        <div class="card h-100 shadow-sm border-0 sim-card">
-          <div class="card-header card-header-sky py-3 d-flex justify-content-between align-items-center">
-            <span class="fw-bold">🚧 Tripod Turnstile Barrier (Mock Controller)</span>
-            <span class="badge bg-white text-primary font-monospace">POST /api/v1/gate/verify-access</span>
+        <div class="pt-panel h-100 d-flex flex-column">
+          <div class="pt-panel-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /><path d="M15 3v18" />
+              </svg>
+              <span class="fw-semibold text-dark">Terminal Turnstile Gate</span>
+            </div>
+            <span class="pt-tag">{{ direction === 'IN' ? 'GATE-IN-01' : 'GATE-OUT-01' }}</span>
           </div>
 
-          <div class="card-body p-3 p-md-4 d-flex flex-column gap-3 w-100">
-            <!-- Gate Hardware Display (OLED Panel & LED Indicator) -->
-            <div class="turnstile-display rounded-3 p-3 text-center position-relative" :class="gateDisplayClass">
-              <!-- LED Signal Lights -->
-              <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
-                <div class="led-light led-green" :class="{ 'led-active': gate.action === 'OPEN_GATE' }">
-                  <span class="led-label">PASS</span>
+          <div class="pt-panel-body d-flex flex-column gap-3 flex-grow-1">
+            <!-- Compact Hardware Display -->
+            <div class="pt-terminal" :class="gateDisplayClass">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="pt-led-pill" :class="{ 'active-pass': gate.action === 'OPEN_GATE' }">
+                    <span class="pt-dot pass" /> PASS
+                  </span>
+                  <span class="pt-led-pill" :class="{ 'active-stop': gate.action === 'KEEP_LOCKED' }">
+                    <span class="pt-dot stop" /> STOP
+                  </span>
                 </div>
-                <div class="led-light led-red" :class="{ 'led-active': gate.action === 'KEEP_LOCKED' }">
-                  <span class="led-label">STOP</span>
+
+                <div class="d-flex align-items-center gap-2">
+                  <span class="pt-hw-meta">Buzzer: {{ gate.buzzer || 'Standby' }}</span>
+                  <span class="pt-hw-meta" :class="{ 'unlocked': gate.action === 'OPEN_GATE' }">
+                    Solenoid: {{ gate.action === 'OPEN_GATE' ? 'TERBUKA' : 'TERKUNCI' }}
+                  </span>
                 </div>
               </div>
 
-              <!-- Main OLED Status -->
-              <div class="oled-screen rounded p-3 mb-2">
-                <div class="oled-status-title fw-bold">
-                  {{ gate.action === 'OPEN_GATE' ? '🔓 GATE DIBUKA - SILAKAN MASUK' : gate.action === 'KEEP_LOCKED' ? '🔒 GATE TERKUNCI - AKSES DITOLAK' : '⚡ SIAP SCAN TIKET / RFID' }}
+              <div class="pt-terminal-screen">
+                <div class="pt-terminal-title">
+                  {{
+                    gate.action === 'OPEN_GATE'
+                      ? 'AKSES DIIZINKAN — SILAKAN MELINTAS'
+                      : gate.action === 'KEEP_LOCKED'
+                        ? 'AKSES DITOLAK — GATE TERKUNCI'
+                        : 'SIAP SCAN TIKET / KARTU RFID'
+                  }}
                 </div>
-                <div class="oled-message text-light mt-1 small">
-                  {{ gate.message || 'Tempelkan barcode tiket kertas atau tap kartu RFID pada reader.' }}
+                <div class="pt-terminal-sub">
+                  {{ gate.message || 'Pilih tiket aktif atau masukkan kode kredensial untuk menguji respon gate.' }}
                 </div>
-              </div>
-
-              <!-- Buzzer & Relay Status -->
-              <div class="d-flex justify-content-center gap-2 flex-wrap">
-                <span class="badge badge-play-amber font-monospace py-1 px-2">
-                  🔊 Buzzer: {{ gate.buzzer || 'Standby' }}
-                </span>
-                <span class="badge py-1 px-2" :class="gate.action === 'OPEN_GATE' ? 'bg-success text-white' : 'badge-play-sky'">
-                  ⚡ Relay Solenoid: {{ gate.action === 'OPEN_GATE' ? 'UNLOCKED (5s)' : 'LOCKED' }}
-                </span>
               </div>
             </div>
 
-            <!-- Controller Input Panel -->
-            <div class="p-3 bg-light rounded-3 border w-100">
-              <!-- Direction Selector -->
-              <label class="form-label fw-bold text-dark small mb-2">1. Pilih Arah Gate (Direction):</label>
-              <div class="btn-group w-100 mb-3" role="group">
-                <button
-                  type="button"
-                  class="btn py-2 fw-bold"
-                  :class="direction === 'IN' ? 'btn-success shadow-sm' : 'btn-outline-success'"
-                  :disabled="busy"
-                  @click="direction = 'IN'"
-                >
-                  🟢 Reader MASUK (IN)
-                </button>
-                <button
-                  type="button"
-                  class="btn py-2 fw-bold"
-                  :class="direction === 'OUT' ? 'btn-danger shadow-sm' : 'btn-outline-danger'"
-                  :disabled="busy"
-                  @click="direction = 'OUT'"
-                >
-                  🔴 Reader KELUAR (OUT)
-                </button>
+            <!-- Form Controls -->
+            <div class="pt-control-box d-flex flex-column gap-3">
+              <!-- Direction -->
+              <div>
+                <label class="pt-label">Arah Jalur Gate</label>
+                <div class="pt-seg-group">
+                  <button
+                    type="button"
+                    class="pt-seg-btn"
+                    :class="{ 'active-in': direction === 'IN' }"
+                    :disabled="busy"
+                    @click="direction = 'IN'"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                    <span>Jalur Masuk (IN)</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="pt-seg-btn"
+                    :class="{ 'active-out': direction === 'OUT' }"
+                    :disabled="busy"
+                    @click="direction = 'OUT'"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span>Jalur Keluar (OUT)</span>
+                  </button>
+                </div>
               </div>
 
-              <!-- Quick Ticket Selector -->
-              <label class="form-label fw-bold text-dark small mb-1" for="ticket-select">
-                2. Pilih Tiket Aktif Hari Ini (Otomatis Terisi):
-              </label>
-              <select
-                id="ticket-select"
-                v-model="selectedTicketId"
-                class="form-select form-select-lg mb-3"
-                :disabled="busy"
-                @change="onSelectTicket"
-              >
-                <option value="">
-                  {{ activeTickets.length ? '-- Pilih Tiket Pengunjung --' : 'Belum ada tiket aktif hari ini' }}
-                </option>
-                <option
-                  v-for="t in activeTickets"
-                  :key="t.id"
-                  :value="t.id"
+              <!-- Active Ticket Select -->
+              <div>
+                <label class="pt-label" for="ticket-select">Tiket Aktif Hari Ini</label>
+                <select
+                  id="ticket-select"
+                  v-model="selectedTicketId"
+                  class="form-select pt-input"
+                  :disabled="busy"
+                  @change="onSelectTicket"
                 >
-                  {{ t.ticket_code }} - {{ t.visitor_name }} ({{ t.package_name }})
-                </option>
-              </select>
+                  <option value="">
+                    {{ activeTickets.length ? 'Pilih tiket pengunjung...' : 'Tidak ada tiket aktif hari ini' }}
+                  </option>
+                  <option
+                    v-for="t in activeTickets"
+                    :key="t.id"
+                    :value="t.id"
+                  >
+                    {{ t.ticket_code }} — {{ t.visitor_name }} ({{ t.package_name }})
+                  </option>
+                </select>
+              </div>
 
-              <!-- Selected Ticket Preview Card (jika tiket dipilih) -->
-              <div v-if="currentTicket" class="card p-2 mb-3 bg-white border border-primary-subtle shadow-xs">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <strong class="text-primary">{{ currentTicket.visitor_name }}</strong>
-                  <span class="badge bg-primary">{{ currentTicket.package_name }}</span>
+              <!-- Selected Ticket Meta -->
+              <div v-if="currentTicket" class="pt-ticket-summary d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold text-dark" style="font-size: 13px;">{{ currentTicket.visitor_name }}</div>
+                  <div class="text-muted" style="font-size: 11.5px;">{{ currentTicket.package_name }}</div>
                 </div>
-                <div class="small text-muted d-flex justify-content-between">
-                  <span>Re-entry: <strong>{{ currentTicket.reentry_count || 0 }}/{{ currentTicket.max_reentry || 2 }}x</strong></span>
-                  <span>Status: <strong>{{ currentTicket.status || 'Active' }}</strong></span>
+                <div class="d-flex align-items-center gap-3" style="font-size: 12px;">
+                  <span class="text-muted">Re-entry: <strong class="text-dark">{{ currentTicket.reentry_count || 0 }}/{{ currentTicket.max_reentry || 2 }}</strong></span>
+                  <span class="pt-tag">{{ currentTicket.status || 'ACTIVE' }}</span>
                 </div>
               </div>
 
               <!-- Credential Input -->
-              <div class="row g-2 mb-3">
+              <div class="row g-2">
                 <div class="col-sm-4">
-                  <label class="form-label small fw-bold text-muted" for="cred-type">Media Scanner:</label>
+                  <label class="pt-label" for="cred-type">Tipe Reader</label>
                   <select
                     id="cred-type"
                     v-model="credentialType"
-                    class="form-select"
+                    class="form-select pt-input"
                     :disabled="busy"
                   >
-                    <option value="QR">📱 Barcode / QR</option>
-                    <option value="RFID">💳 RFID Mifare</option>
+                    <option value="QR">QR / Barcode</option>
+                    <option value="RFID">Kartu RFID</option>
                   </select>
                 </div>
                 <div class="col-sm-8">
-                  <label class="form-label small fw-bold text-muted" for="cred-value">Kode Tiket / UID RFID:</label>
+                  <label class="pt-label" for="cred-value">Kode Tiket / UID RFID</label>
                   <input
                     id="cred-value"
                     v-model.trim="credentialValue"
                     type="text"
-                    class="form-control font-monospace fw-bold"
-                    placeholder="Contoh: TCK-1107-XXXX atau UID"
+                    class="form-control pt-input font-monospace"
+                    placeholder="Masukkan kode tiket atau UID"
                     :disabled="busy"
                     @keyup.enter="scan"
                   >
                 </div>
               </div>
 
-              <!-- Button Simulasikan Scan (Full Action: Disable jika input kosong / loading) -->
+              <!-- Submit Scan -->
               <button
                 type="button"
-                class="btn btn-play-sky btn-lg w-100 py-3 fw-bold text-white shadow"
+                class="pt-btn-scan w-100"
                 :disabled="isScanDisabled"
                 @click="scan"
               >
-                <span v-if="busy" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-                <span>{{ busy ? 'Memproses Turnstile...' : '⚡ SIMULASIKAN SCAN HARDWARE' }}</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                  <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                  <line x1="7" y1="12" x2="17" y2="12" />
+                </svg>
+                <span>{{ busy ? 'Memproses...' : 'Proses Scan Gate' }}</span>
               </button>
-
-              <div v-if="scanBlockReason" class="text-danger small mt-2 fw-semibold text-center">
-                ⚠️ {{ scanBlockReason }}
-              </div>
             </div>
 
-            <!-- Testing Sandbox Tools: Overtime & Re-entry -->
-            <div class="p-3 rounded-3 border border-warning bg-warning-subtle w-100">
-              <div class="fw-bold text-dark mb-1">
-                🧪 Alat Uji Coba Aturan Bisnis Playground:
-              </div>
-              <p class="small text-muted mb-2">
-                Gunakan tombol berikut untuk menguji validasi gate saat pengunjung bermain melewati batas waktu atau kuota re-entry:
-              </p>
+            <!-- Quick Scenario Actions (Minimal Footer) -->
+            <div class="pt-scenario-bar mt-auto d-flex flex-wrap align-items-center justify-content-between gap-2">
+              <span class="text-muted fw-medium" style="font-size: 12px;">Skenario Uji Cepat</span>
               <div class="d-flex flex-wrap gap-2">
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-danger fw-bold"
+                  class="pt-btn-subtle"
                   :disabled="!canFastForward || busy"
                   @click="fastForward(75)"
                 >
-                  ⏩ Majukan Waktu +75 Menit (Uji Overtime)
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span>Majukan +75 Menit</span>
                 </button>
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-info fw-bold"
+                  class="pt-btn-subtle"
                   :disabled="!canTestReentry || busy"
                   @click="testReentry"
                 >
-                  🔄 Uji Re-entry 3x (Uji Limit Kuota 2x)
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                    <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                  </svg>
+                  <span>Uji Batas Re-entry</span>
                 </button>
               </div>
-              <small v-if="!canFastForward" class="text-muted d-block mt-1 fst-italic">
-                * Pilih tiket berdurasi yang sudah pernah scan masuk untuk mengaktifkan tombol uji di atas.
-              </small>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Kolom Kanan: Riwayat Scan & Balon Chat WhatsApp -->
+      <!-- Right Column: Access Logs & Notification Log -->
       <div class="col-lg-6 d-flex flex-column gap-3">
-        <!-- Log Scan Card -->
-        <div class="card shadow-sm border-0 sim-card">
-          <div class="card-header card-header-violet py-3 d-flex justify-content-between align-items-center">
-            <span class="fw-bold">📋 Riwayat Scan Turnstile (Hardware Access Logs)</span>
-            <span class="badge bg-white text-dark fw-bold">{{ logs.length }} Scan</span>
+        <!-- Access Logs Card -->
+        <div class="pt-panel">
+          <div class="pt-panel-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+              <span class="fw-semibold text-dark">Riwayat Scan Gate</span>
+            </div>
+            <span class="pt-tag">{{ logs.length }} Aktivitas</span>
           </div>
-          <div class="card-body p-0" style="max-height: 280px; overflow-y: auto;">
-            <table class="table table-hover table-striped align-middle mb-0 small">
-              <thead class="table-light sticky-top">
+
+          <div class="table-responsive" style="max-height: 290px; overflow-y: auto;">
+            <table class="table pt-table align-middle mb-0">
+              <thead class="sticky-top">
                 <tr>
-                  <th style="width: 85px;">Waktu</th>
-                  <th style="width: 70px;">Arah</th>
+                  <th style="width: 90px;">Waktu</th>
+                  <th style="width: 75px;">Arah</th>
                   <th>Kode Tiket</th>
-                  <th style="width: 140px;" class="text-end">Hasil Akses</th>
+                  <th style="width: 145px;" class="text-end">Status Akses</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="logs.length === 0">
-                  <td colspan="4" class="text-center text-muted py-4">
-                    Belum ada riwayat scan pada turnstile hari ini.
+                  <td colspan="4" class="text-center text-muted py-4" style="font-size: 13px;">
+                    Belum ada aktivitas scan hari ini.
                   </td>
                 </tr>
                 <tr v-for="log in logs" :key="log.id">
-                  <td class="font-monospace text-muted">{{ fmtTimeSeconds(log.scanned_at) }}</td>
+                  <td class="font-monospace text-muted" style="font-size: 12px;">
+                    {{ fmtTimeSeconds(log.scanned_at) }}
+                  </td>
                   <td>
                     <span
-                      class="badge px-2 py-1"
-                      :class="log.direction === 'in' || log.direction === 'IN' ? 'bg-success' : 'bg-danger'"
+                      class="pt-dir-badge"
+                      :class="String(log.direction).toUpperCase() === 'IN' ? 'in' : 'out'"
                     >
                       {{ String(log.direction).toUpperCase() }}
                     </span>
                   </td>
-                  <td>
-                    <strong class="text-dark">{{ log.ticket_code || log.credential_value }}</strong>
+                  <td class="font-monospace fw-medium text-dark" style="font-size: 12.5px;">
+                    {{ log.ticket_code || log.credential_value }}
                   </td>
                   <td class="text-end">
                     <span
-                      class="badge py-1 px-2"
-                      :class="log.is_allowed ? 'bg-success' : 'bg-danger'"
+                      class="pt-status-badge"
+                      :class="log.is_allowed ? 'allowed' : 'denied'"
                     >
-                      {{ log.is_allowed ? 'DIIZINKAN' : 'DITOLAK' }}
+                      {{ log.is_allowed ? 'Diizinkan' : 'Ditolak' }}
                     </span>
-                    <div v-if="log.deny_reason" class="text-danger small font-monospace mt-1" style="font-size: 11px;">
+                    <div v-if="log.deny_reason" class="text-danger font-monospace mt-1" style="font-size: 10.5px;">
                       {{ log.deny_reason }}
                     </div>
                   </td>
@@ -281,38 +312,38 @@
           </div>
         </div>
 
-        <!-- WhatsApp Outbox Card (Balon Chat Hijau Modern) -->
-        <div class="card shadow-sm border-0 sim-card flex-grow-1">
-          <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background-color: #075e54; color: white;">
-            <span class="fw-bold d-flex align-items-center gap-2">
-              <span>💬</span> Notifikasi Terkirim (Sandbox WhatsApp Bot &amp; Email)
-            </span>
-            <span class="badge bg-light text-dark font-monospace">{{ outbox.length }} Pesan</span>
+        <!-- Notification Log Card -->
+        <div class="pt-panel flex-grow-1 d-flex flex-column">
+          <div class="pt-panel-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </svg>
+              <span class="fw-semibold text-dark">Log Notifikasi Pesan</span>
+            </div>
+            <span class="pt-tag">{{ outbox.length }} Pesan</span>
           </div>
-          <div
-            class="card-body p-3 whatsapp-bg"
-            style="max-height: 380px; overflow-y: auto;"
-          >
+
+          <div class="pt-panel-body flex-grow-1" style="max-height: 280px; overflow-y: auto;">
             <div
               v-if="outbox.length === 0"
-              class="text-center text-muted py-5 bg-white rounded-3 shadow-xs"
+              class="text-center text-muted py-4"
+              style="font-size: 13px;"
             >
-              Belum ada notifikasi yang terkirim dari transaksi kasir atau gate.
+              Belum ada pesan notifikasi keluar.
             </div>
 
-            <!-- Balon Pesan WhatsApp Rapi -->
             <div
               v-for="msg in outbox"
               :key="msg.id"
-              class="wa-bubble mb-3 p-3 rounded-3 shadow-sm bg-white"
+              class="pt-msg-item mb-2"
             >
-              <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom">
-                <span class="badge bg-success-subtle text-success border border-success fw-bold">
-                  {{ msg.type }}
-                </span>
-                <small class="text-muted font-monospace">{{ fmtDateTime(msg.created_at) }}</small>
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="pt-msg-type">{{ msg.type }}</span>
+                <span class="text-muted font-monospace" style="font-size: 11px;">{{ fmtDateTime(msg.created_at) }}</span>
               </div>
-              <div class="wa-content font-monospace text-dark mt-2">
+              <div class="pt-msg-body">
                 {{ msg.content }}
               </div>
             </div>
@@ -352,20 +383,15 @@ const currentTicket = computed(() => {
 })
 
 const gateDisplayClass = computed(() => {
-  if (gate.value.action === 'OPEN_GATE') return 'turnstile-open'
-  if (gate.value.action === 'KEEP_LOCKED') return 'turnstile-locked'
-  return 'turnstile-standby'
+  if (gate.value.action === 'OPEN_GATE') return 'is-open'
+  if (gate.value.action === 'KEEP_LOCKED') return 'is-locked'
+  return 'is-standby'
 })
 
 const isScanDisabled = computed(() => {
   if (busy.value) return true
   if (!credentialValue.value.trim()) return true
   return false
-})
-
-const scanBlockReason = computed(() => {
-  if (!credentialValue.value.trim()) return 'Pilih tiket dari dropdown atau masukkan kode tiket.'
-  return ''
 })
 
 const canFastForward = computed(() => {
@@ -430,14 +456,14 @@ async function scan() {
     }
 
     if (res.action === 'OPEN_GATE') {
-      notice.value = { type: 'success', text: `Akses ${direction.value} DIIZINKAN untuk ${res.ticket?.visitor_name || 'Pengunjung'}` }
+      notice.value = { type: 'success', text: `Akses ${direction.value} diizinkan untuk ${res.ticket?.visitor_name || 'Pengunjung'}.` }
     } else {
-      notice.value = { type: 'error', text: `Akses ${direction.value} DITOLAK: ${res.message}` }
+      notice.value = { type: 'error', text: `Akses ${direction.value} ditolak: ${res.message}` }
     }
 
     await refreshAll()
   } catch (err) {
-    notice.value = { type: 'error', text: err.message || 'Gagal memanggil controller gate.' }
+    notice.value = { type: 'error', text: err.message || 'Gagal memproses respon gate.' }
   } finally {
     busy.value = false
   }
@@ -460,7 +486,7 @@ async function fastForward(minutes) {
     if (res.success) {
       notice.value = {
         type: 'success',
-        text: `Waktu tiket ${currentTicket.value.ticket_code} dimajukan ${minutes} menit. Tiket sekarang dalam status OVERTIME!`
+        text: `Waktu bermain tiket ${currentTicket.value.ticket_code} dimajukan ${minutes} menit.`
       }
       await refreshAll()
     } else {
@@ -480,7 +506,6 @@ async function testReentry() {
 
   try {
     const t = currentTicket.value
-    // Scan out -> Scan in (1) -> Scan out -> Scan in (2) -> Scan out -> Scan in (3 -> tolak)
     const steps = ['OUT', 'IN', 'OUT', 'IN', 'OUT', 'IN']
     let lastResult = null
 
@@ -507,7 +532,7 @@ async function testReentry() {
 
     notice.value = {
       type: lastResult.action === 'OPEN_GATE' ? 'success' : 'error',
-      text: `Uji simulasi re-entry selesai: ${lastResult.message}`
+      text: `Hasil uji re-entry: ${lastResult.message}`
     }
 
     await refreshAll()
@@ -522,98 +547,399 @@ onMounted(refreshAll)
 </script>
 
 <style scoped>
-.hardware-simulator-page {
-  min-height: calc(100vh - 120px);
+.pt-sim-page {
+  max-width: 1400px;
 }
 
-.sim-card {
-  width: 100% !important;
-  min-width: 0 !important;
+.pt-page-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
 }
 
-/* Turnstile OLED & LED Box */
-.turnstile-display {
-  background: linear-gradient(135deg, #00729c 0%, #00a8e8 100%);
+.pt-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-outline:hover {
+  background: #f8fafc;
+  color: #0284c7;
+  border-color: #94a3b8;
+}
+
+.pt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
   color: #ffffff;
-  border: 2px solid #5cd2ff;
-  transition: all 0.3s ease;
-  width: 100%;
+  background: #0284c7;
+  border: 1px solid #0284c7;
+  border-radius: 8px;
+  transition: all 0.15s ease;
 }
 
-.turnstile-standby {
-  border-color: #5cd2ff;
-  box-shadow: 0 8px 20px rgba(0, 168, 232, 0.2);
+.pt-btn-primary:hover:not(:disabled) {
+  background: #0369a1;
 }
 
-.turnstile-open {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  border-color: #6ee7b7;
-  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.35);
+.pt-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-.turnstile-locked {
-  background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%);
-  border-color: #fda4af;
-  box-shadow: 0 8px 22px rgba(244, 63, 94, 0.35);
+.pt-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.oled-screen {
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+.pt-alert-success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
-.oled-status-title {
-  font-size: 1.25rem;
-  letter-spacing: 0.5px;
+.pt-alert-danger {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
-/* LED Indicator Lights */
-.led-light {
-  width: 50px;
-  height: 50px;
+.pt-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pt-panel-header {
+  padding: 13px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 14px;
+}
+
+.pt-panel-body {
+  padding: 16px 18px;
+}
+
+.pt-tag {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+/* Compact Turnstile Status Display */
+.pt-terminal {
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid #1e293b;
+  transition: all 0.2s ease;
+}
+
+.pt-terminal.is-open {
+  background: #064e3b;
+  border-color: #059669;
+}
+
+.pt-terminal.is-locked {
+  background: #4c0519;
+  border-color: #e11d48;
+}
+
+.pt-led-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.pt-led-pill.active-pass {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.pt-led-pill.active-stop {
+  background: rgba(244, 63, 94, 0.25);
+  color: #fda4af;
+}
+
+.pt-dot {
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  display: flex;
+  background: currentColor;
+}
+
+.pt-hw-meta {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.pt-hw-meta.unlocked {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.18);
+}
+
+.pt-terminal-screen {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 14px 16px;
+  text-align: center;
+}
+
+.pt-terminal-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+}
+
+.pt-terminal-sub {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin-top: 4px;
+}
+
+/* Controls */
+.pt-control-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.pt-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.pt-seg-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pt-seg-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  opacity: 0.3;
-  transition: all 0.25s ease;
+  gap: 7px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: all 0.15s ease;
 }
 
-.led-green {
-  background: #10b981;
+.pt-seg-btn:hover:not(:disabled) {
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.pt-seg-btn.active-in {
+  background: #0284c7;
+  border-color: #0284c7;
   color: #ffffff;
 }
 
-.led-red {
-  background: #ef4444;
+.pt-seg-btn.active-out {
+  background: #0f172a;
+  border-color: #0f172a;
   color: #ffffff;
 }
 
-.led-active {
-  opacity: 1 !important;
-  box-shadow: 0 0 16px currentColor;
-  transform: scale(1.08);
+.pt-input {
+  font-size: 13px;
+  border-color: #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px;
 }
 
-/* WhatsApp Bubble Chat */
-.whatsapp-bg {
-  background-color: #efeae2;
-  background-image: radial-gradient(#d1c7b7 1px, transparent 1px);
-  background-size: 20px 20px;
+.pt-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
-.wa-bubble {
-  border-left: 4px solid #25d366;
-  max-width: 100%;
+.pt-ticket-summary {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
 }
 
-.wa-content {
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
+.pt-btn-scan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #0284c7;
+  border: none;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.pt-btn-scan:hover:not(:disabled) {
+  background: #0369a1;
+}
+
+.pt-btn-scan:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.pt-scenario-bar {
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pt-btn-subtle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
   font-size: 12px;
-  line-height: 1.5;
+  font-weight: 500;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+
+.pt-btn-subtle:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pt-btn-subtle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Tables & Logs */
+.pt-table th {
+  background: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px 14px;
+}
+
+.pt-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pt-dir-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 5px;
+}
+
+.pt-dir-badge.in {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.pt-dir-badge.out {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.pt-status-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 5px;
+}
+
+.pt-status-badge.allowed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pt-status-badge.denied {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pt-msg-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.pt-msg-type {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.pt-msg-body {
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+@keyframes pt-spin {
+  to { transform: rotate(360deg); }
+}
+
+.pt-spin {
+  animation: pt-spin 0.8s linear infinite;
 }
 </style>

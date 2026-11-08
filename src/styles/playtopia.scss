@@ -23,45 +23,40 @@ body, #app-root {
   overflow-x: hidden;
 }
 
-/* Kartu & Container Playtopia */
+/* Fix legacy Sing App .rounded forcing width/height 1.5em on block elements */
+div.rounded,
+section.rounded,
+article.rounded,
+aside.rounded {
+  width: auto;
+  height: auto;
+  display: block;
+  line-height: inherit;
+}
+
+/* Kartu & Container Playtopia — Clean Professional */
 .card, .widget {
   background: #ffffff !important;
-  border: 1.5px solid #e0f2fe !important;
-  border-radius: 16px !important;
-  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.05) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
 
   .card-header {
-    background: linear-gradient(135deg, #f8fdff 0%, #f0f9ff 100%) !important;
-    border-bottom: 1.5px solid #e0f2fe !important;
-    font-weight: 700;
-    color: #0369a1;
+    background: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    font-weight: 600;
+    color: #0f172a !important;
     padding: 14px 18px;
   }
-}
 
-/* Header Card Berwarna Cerah (Pengganti bg-dark yang gelap) */
-.card-header-sky {
-  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
-  color: #ffffff !important;
-  border-bottom: none !important;
-}
-
-.card-header-pink {
-  background: linear-gradient(135deg, #ff5cbc 0%, #db2777 100%) !important;
-  color: #ffffff !important;
-  border-bottom: none !important;
-}
-
-.card-header-mint {
-  background: linear-gradient(135deg, #34d399 0%, #059669 100%) !important;
-  color: #ffffff !important;
-  border-bottom: none !important;
-}
-
-.card-header-violet {
-  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%) !important;
-  color: #ffffff !important;
-  border-bottom: none !important;
+  .card-header.card-header-sky,
+  .card-header.card-header-pink,
+  .card-header.card-header-mint,
+  .card-header.card-header-violet {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
 }
 
 /* Tombol Interaktif Playtopia */
