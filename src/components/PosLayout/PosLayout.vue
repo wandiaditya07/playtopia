@@ -15,7 +15,6 @@
     <div class="pt-main-pane">
       <PosHeader
         :collapsed="isCollapsed"
-        @toggle-sidebar="toggleSidebar"
         @toggle-mobile="mobileOpen = !mobileOpen"
       />
 
