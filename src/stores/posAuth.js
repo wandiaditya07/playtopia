@@ -32,9 +32,13 @@ export const usePosAuthStore = defineStore('posAuth', () => {
   const isExpiringSoon = computed(() => remainingMs.value > 0 && remainingMs.value < 5 * 60 * 1000)
 
   function can(menuCode, action = 'can_read') {
-    if (user.value?.role === 'Admin') return true
-    const perm = permissions.value?.[menuCode]
-    return Boolean(perm?.[action])
+    if (user.value?.role === 'Admin' || Number(user.value?.role_id) === 2) return true
+    const rawCode = String(menuCode || '')
+    const shortCode = rawCode.includes('.') ? rawCode.split('.').pop() : rawCode
+    const perm = permissions.value?.[rawCode] || permissions.value?.[shortCode]
+    if (!perm) return false
+    const actKey = String(action).startsWith('can_') ? action : `can_${action}`
+    return Boolean(perm[actKey] ?? perm[action])
   }
 
   function stopTimers() {

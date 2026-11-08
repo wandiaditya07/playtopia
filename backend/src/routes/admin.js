@@ -106,15 +106,188 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// 2. GET /api/v1/admin/roles-matrix -> Roles, Menus (Grouped), dan Role Menu Permissions
+// 2. GET /api/v1/admin/roles-matrix -> Roles, Menus (Grouped), Role Menu Permissions, dan Users (3-in-1 RBAC)
 router.get('/roles-matrix', async (req, res) => {
   try {
     const [roles] = await pool.query('SELECT * FROM roles ORDER BY id ASC');
     const [menus] = await pool.query('SELECT * FROM menus ORDER BY sort_order ASC, id ASC');
     const [permissions] = await pool.query('SELECT * FROM role_menu_permissions');
+    const [users] = await pool.query(`
+      SELECT u.id, u.role_id, u.outlet_id, u.name, u.email, u.is_active, u.last_login_at, u.created_at,
+             r.name AS role_name, o.name AS outlet_name
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      LEFT JOIN outlets o ON u.outlet_id = o.id
+      ORDER BY u.id ASC
+    `);
+    const [outlets] = await pool.query('SELECT id, code, name FROM outlets WHERE is_active = 1 ORDER BY id ASC');
     res.json({
       success: true,
-      data: { roles, menus, permissions }
+      data: { roles, menus, permissions, users, outlets }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/v1/admin/roles -> Buat Role Baru secara dinamis (+ opsional salin hak akses dari role lain)
+router.post('/roles', requireRole('Admin'), async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const name = String(req.body?.name || '').trim();
+    const description = String(req.body?.description || '').trim() || `Role operasional ${name}`;
+    const cloneFromRoleId = Number(req.body?.clone_from_role_id) || 0;
+
+    if (!name || name.length < 2) {
+      return res.status(400).json({ success: false, message: 'Nama role wajib diisi (minimal 2 karakter).' });
+    }
+
+    const [dup] = await conn.query('SELECT id FROM roles WHERE LOWER(name) = LOWER(?) LIMIT 1', [name]);
+    if (dup.length > 0) {
+      return res.status(409).json({ success: false, message: `Role dengan nama "${name}" sudah terdaftar.` });
+    }
+
+    await conn.beginTransaction();
+    const [info] = await conn.query(
+      `INSERT INTO roles (name, description, is_system, is_active, created_at, updated_at)
+       VALUES (?, ?, 0, 1, NOW(), NOW())`,
+      [name, description]
+    );
+    const newRoleId = info.insertId;
+
+    const [allMenus] = await conn.query('SELECT id, code FROM menus ORDER BY id ASC');
+    let sourceMap = new Map();
+    if (cloneFromRoleId > 0) {
+      const [srcPerms] = await conn.query(
+        'SELECT menu_id, can_read, can_create, can_update, can_delete FROM role_menu_permissions WHERE role_id = ?',
+        [cloneFromRoleId]
+      );
+      sourceMap = new Map(srcPerms.map(p => [Number(p.menu_id), p]));
+    }
+
+    for (const m of allMenus) {
+      const src = sourceMap.get(Number(m.id));
+      const isDashboard = m.code === 'dashboard';
+      const canRead = src ? (src.can_read ? 1 : 0) : (isDashboard ? 1 : 0);
+      const canCreate = src ? (src.can_create ? 1 : 0) : 0;
+      const canUpdate = src ? (src.can_update ? 1 : 0) : 0;
+      const canDelete = src ? (src.can_delete ? 1 : 0) : 0;
+
+      await conn.query(
+        `INSERT INTO role_menu_permissions (role_id, menu_id, can_read, can_create, can_update, can_delete)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [newRoleId, m.id, canRead, canCreate, canUpdate, canDelete]
+      );
+    }
+
+    await conn.commit();
+    await logAudit(req, 'CREATE_ROLE', 'roles', newRoleId, { name, description, cloneFromRoleId });
+    res.status(201).json({
+      success: true,
+      message: `Role "${name}" berhasil dibuat.`,
+      data: { id: newRoleId, name, description }
+    });
+  } catch (error) {
+    await conn.rollback();
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// PUT /api/v1/admin/roles/:id -> Ubah Nama & Deskripsi Role
+router.put('/roles/:id', requireRole('Admin'), async (req, res) => {
+  try {
+    const roleId = Number(req.params.id);
+    const name = String(req.body?.name || '').trim();
+    const description = String(req.body?.description || '').trim();
+
+    if (!Number.isInteger(roleId) || !name) {
+      return res.status(400).json({ success: false, message: 'Nama role wajib diisi.' });
+    }
+
+    const [rows] = await pool.query('SELECT * FROM roles WHERE id = ? LIMIT 1', [roleId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Role tidak ditemukan.' });
+    }
+
+    const existing = rows[0];
+    const finalName = existing.is_system ? existing.name : name;
+
+    const [dup] = await pool.query('SELECT id FROM roles WHERE LOWER(name) = LOWER(?) AND id <> ? LIMIT 1', [finalName, roleId]);
+    if (dup.length > 0) {
+      return res.status(409).json({ success: false, message: `Nama role "${finalName}" sudah digunakan.` });
+    }
+
+    await pool.query(
+      'UPDATE roles SET name = ?, description = ?, updated_at = NOW() WHERE id = ?',
+      [finalName, description, roleId]
+    );
+
+    await logAudit(req, 'UPDATE_ROLE', 'roles', roleId, { name: finalName, description });
+    res.json({ success: true, message: `Informasi role "${finalName}" berhasil diperbarui.` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// DELETE /api/v1/admin/roles/:id -> Hapus Role Custom (dan pindahkan user ke role pengganti bila ada)
+router.delete('/roles/:id', requireRole('Admin'), async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    const roleId = Number(req.params.id);
+    const fallbackRoleId = Number(req.query?.fallback_role_id || req.body?.fallback_role_id) || 3;
+
+    const [rows] = await conn.query('SELECT * FROM roles WHERE id = ? LIMIT 1', [roleId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Role tidak ditemukan.' });
+    }
+    if (rows[0].is_system || [1, 2, 3].includes(roleId)) {
+      return res.status(400).json({ success: false, message: 'Role bawaan sistem (Client, Admin, Staff) tidak dapat dihapus.' });
+    }
+
+    await conn.beginTransaction();
+    await conn.query('UPDATE users SET role_id = ?, updated_at = NOW() WHERE role_id = ?', [fallbackRoleId, roleId]);
+    await conn.query('DELETE FROM role_menu_permissions WHERE role_id = ?', [roleId]);
+    await conn.query('DELETE FROM roles WHERE id = ?', [roleId]);
+    await conn.commit();
+
+    await logAudit(req, 'DELETE_ROLE', 'roles', roleId, { name: rows[0].name, fallbackRoleId });
+    res.json({ success: true, message: `Role "${rows[0].name}" berhasil dihapus.` });
+  } catch (error) {
+    await conn.rollback();
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    conn.release();
+  }
+});
+
+// PUT /api/v1/admin/roles/:id/assign-user -> Masukkan / Pindahkan User ke Role Ini secara instan
+router.put('/roles/:id/assign-user', requireRole('Admin'), async (req, res) => {
+  try {
+    const roleId = Number(req.params.id);
+    const userId = Number(req.body?.user_id);
+
+    if (!Number.isInteger(roleId) || !Number.isInteger(userId)) {
+      return res.status(400).json({ success: false, message: 'Data role_id dan user_id wajib valid.' });
+    }
+
+    const [rRows] = await pool.query('SELECT id, name FROM roles WHERE id = ? LIMIT 1', [roleId]);
+    if (rRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Role tujuan tidak ditemukan.' });
+    }
+
+    const [uRows] = await pool.query('SELECT id, name, email FROM users WHERE id = ? LIMIT 1', [userId]);
+    if (uRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan.' });
+    }
+
+    await pool.query('UPDATE users SET role_id = ?, updated_at = NOW() WHERE id = ?', [roleId, userId]);
+    await logAudit(req, 'ASSIGN_USER_ROLE', 'users', userId, { role_id: roleId, role_name: rRows[0].name });
+
+    res.json({
+      success: true,
+      message: `${uRows[0].name} berhasil dimasukkan ke dalam role ${rRows[0].name}.`
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

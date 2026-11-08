@@ -184,17 +184,28 @@ router.post('/login', async (req, res) => {
 // GET /api/v1/auth/me -> validasi token + info sisa waktu sesi + menu groups & permissions terbaru
 router.get('/me', requireAuth, async (req, res) => {
   try {
-    const { menu_groups, permissions } = await getRoleMenuStructure(req.user.role_id, req.user.role);
+    const [uRows] = await pool.query(`
+      SELECT u.id, u.role_id, u.name, u.email, u.outlet_id, r.name AS role_name, r.description AS role_description
+      FROM users u
+      JOIN roles r ON r.id = u.role_id
+      WHERE u.id = ? LIMIT 1
+    `, [req.user.id]);
+    const freshUser = uRows[0];
+    const roleId = freshUser ? freshUser.role_id : req.user.role_id;
+    const roleName = freshUser ? freshUser.role_name : req.user.role;
+
+    const { menu_groups, permissions } = await getRoleMenuStructure(roleId, roleName);
     res.json({
       success: true,
       data: {
         user: {
           id: req.user.id,
-          role_id: req.user.role_id,
-          name: req.user.name,
-          email: req.user.email,
-          role: req.user.role,
-          outlet_id: req.user.outlet_id
+          role_id: roleId,
+          name: freshUser ? freshUser.name : req.user.name,
+          email: freshUser ? freshUser.email : req.user.email,
+          role: roleName,
+          role_description: freshUser?.role_description || '',
+          outlet_id: freshUser ? freshUser.outlet_id : req.user.outlet_id
         },
         menu_groups,
         permissions,

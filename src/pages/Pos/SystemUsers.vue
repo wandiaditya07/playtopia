@@ -76,7 +76,7 @@
               <td>{{ u.outlet_name || 'Playtopia Senayan Park' }}</td>
               <td>
                 <span class="pt-dir-badge" :class="u.role_name === 'Admin' ? 'in' : 'out'">
-                  {{ u.role_name === 'Admin' ? 'Administrator' : u.role_name === 'Client' ? 'Owner / Client' : 'Staff / Kasir' }}
+                  {{ u.role_name === 'Admin' ? 'Administrator' : u.role_name === 'Client' ? 'Owner / Client' : u.role_name === 'Staff' ? 'Staff / Kasir' : u.role_name }}
                 </span>
               </td>
               <td>
