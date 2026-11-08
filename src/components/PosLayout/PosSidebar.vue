@@ -312,24 +312,26 @@ function getMenuSvg(code) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  height: 34px;
-  max-width: 54px;
+  height: 36px;
+  max-width: 56px;
+  overflow: hidden;
 }
 
 .pt-char-p {
-  height: 30px;
+  height: 32px;
   width: auto;
   object-fit: contain;
   display: block;
+  clip-path: polygon(0% 0%, 84% 0%, 86% 52%, 66% 58%, 66% 100%, 0% 100%);
 }
 
 .pt-char-t {
-  height: 29px;
+  height: 32px;
   width: auto;
   object-fit: contain;
   display: block;
-  margin-left: -2px;
+  margin-left: -9px;
+  clip-path: polygon(10% 0%, 86% 0%, 86% 36%, 64% 39%, 64% 100%, 24% 100%, 24% 43%, 14% 40%);
 }
 
 .pt-user-card {
