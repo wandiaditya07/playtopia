@@ -1,66 +1,111 @@
 <template>
-  <div
-    :class="['root', 'sing-dashboard', { sidebarClose, sidebarStatic }, 'sidebar-' + sidebarColorName, 'sidebar-' + sidebarType, 'navbar-' + navbarColorName]"
-  >
-    <PosSidebar />
-    <div class="wrap">
-      <PosHeader />
-      <div class="content">
+  <div class="pt-app-shell" :class="{ 'pt-sidebar-collapsed': isCollapsed, 'pt-mobile-open': mobileOpen }">
+    <!-- Mobile backdrop -->
+    <div v-if="mobileOpen" class="pt-mobile-backdrop" @click="mobileOpen = false" />
+
+    <!-- Sidebar -->
+    <PosSidebar
+      :collapsed="isCollapsed"
+      @close-mobile="mobileOpen = false"
+    />
+
+    <!-- Main Wrapper -->
+    <div class="pt-main-pane">
+      <PosHeader
+        :collapsed="isCollapsed"
+        @toggle-sidebar="toggleSidebar"
+        @toggle-mobile="mobileOpen = !mobileOpen"
+      />
+
+      <main class="pt-content-area">
         <router-view v-slot="{ Component }">
-          <Transition
-            name="router-animation"
-            mode="out-in"
-          >
+          <Transition name="pt-fade" mode="out-in">
             <component :is="Component" />
           </Transition>
         </router-view>
-        <footer class="contentFooter">
-          Playtopia POS - Playground &amp; Cafe
-        </footer>
-      </div>
+      </main>
+
+      <footer class="pt-footer d-print-none">
+        <span>&copy; 2026 <strong>Playtopia Indonesia</strong> — Playground &amp; Cafe Integrated POS</span>
+        <span class="text-muted">Role aktif: <strong>{{ auth.user?.role || 'Staff' }}</strong></span>
+      </footer>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted } from 'vue'
-import { useLayoutStore } from '@/stores/layout'
+import { ref } from 'vue'
+import { usePosAuthStore } from '@/stores/posAuth'
 import PosSidebar from './PosSidebar.vue'
 import PosHeader from './PosHeader.vue'
 
-const layoutStore = useLayoutStore()
+const auth = usePosAuthStore()
+const isCollapsed = ref(false)
+const mobileOpen = ref(false)
 
-const sidebarClose = computed(() => layoutStore.sidebarClose)
-const sidebarStatic = computed(() => layoutStore.sidebarStatic)
-const sidebarColorName = computed(() => layoutStore.sidebarColorName)
-const navbarColorName = computed(() => layoutStore.navbarColorName)
-const sidebarType = computed(() => layoutStore.sidebarType)
-
-function handleWindowResize() {
-  if (window.innerWidth <= 768 && sidebarStatic.value) {
-    layoutStore.toggleSidebar()
-    layoutStore.changeSidebarActive(null)
-  }
+function toggleSidebar() {
+  isCollapsed.value = !isCollapsed.value
 }
-
-onMounted(() => {
-  const staticSidebar = JSON.parse(localStorage.getItem('sidebarStatic'))
-  if (staticSidebar) {
-    layoutStore.sidebarStatic = true
-  } else if (!sidebarClose.value) {
-    setTimeout(() => {
-      layoutStore.switchSidebar(true)
-      layoutStore.changeSidebarActive(null)
-    }, 2500)
-  }
-  handleWindowResize()
-  window.addEventListener('resize', handleWindowResize)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleWindowResize)
-})
 </script>
 
-<style src="../Layout/Layout.scss" lang="scss" />
+<style scoped>
+.pt-app-shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(180deg, #f0f9ff 0%, #fdf4ff 50%, #f8fafc 100%);
+  overflow-x: hidden;
+}
 
+.pt-main-pane {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.pt-content-area {
+  flex: 1 1 auto;
+  padding: 20px 24px;
+  min-width: 0;
+  width: 100%;
+}
+
+.pt-footer {
+  padding: 12px 24px;
+  font-size: 12px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.8);
+  border-top: 1px solid #e0f2fe;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pt-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 1035;
+}
+
+.pt-fade-enter-active,
+.pt-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.pt-fade-enter-from,
+.pt-fade-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+@media (max-width: 991.98px) {
+  .pt-content-area {
+    padding: 14px;
+  }
+}
+</style>

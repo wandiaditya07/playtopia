@@ -50,9 +50,9 @@
       <!-- Kolom Kiri: Visual Turnstile & Kontrol Scan -->
       <div class="col-lg-6">
         <div class="card h-100 shadow-sm border-0 sim-card">
-          <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+          <div class="card-header card-header-sky py-3 d-flex justify-content-between align-items-center">
             <span class="fw-bold">🚧 Tripod Turnstile Barrier (Mock Controller)</span>
-            <span class="badge bg-secondary font-monospace">POST /api/v1/gate/verify-access</span>
+            <span class="badge bg-white text-primary font-monospace">POST /api/v1/gate/verify-access</span>
           </div>
 
           <div class="card-body p-3 p-md-4 d-flex flex-column gap-3 w-100">
@@ -80,11 +80,11 @@
 
               <!-- Buzzer & Relay Status -->
               <div class="d-flex justify-content-center gap-2 flex-wrap">
-                <span class="badge bg-black text-warning font-monospace py-1 px-2 border border-secondary">
-                  Buzzer: {{ gate.buzzer || 'Standby' }}
+                <span class="badge badge-play-amber font-monospace py-1 px-2">
+                  🔊 Buzzer: {{ gate.buzzer || 'Standby' }}
                 </span>
-                <span class="badge py-1 px-2" :class="gate.action === 'OPEN_GATE' ? 'bg-success' : 'bg-secondary'">
-                  Relay Solenoid: {{ gate.action === 'OPEN_GATE' ? 'UNLOCKED (5s)' : 'LOCKED' }}
+                <span class="badge py-1 px-2" :class="gate.action === 'OPEN_GATE' ? 'bg-success text-white' : 'badge-play-sky'">
+                  ⚡ Relay Solenoid: {{ gate.action === 'OPEN_GATE' ? 'UNLOCKED (5s)' : 'LOCKED' }}
                 </span>
               </div>
             </div>
@@ -231,9 +231,9 @@
       <div class="col-lg-6 d-flex flex-column gap-3">
         <!-- Log Scan Card -->
         <div class="card shadow-sm border-0 sim-card">
-          <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+          <div class="card-header card-header-violet py-3 d-flex justify-content-between align-items-center">
             <span class="fw-bold">📋 Riwayat Scan Turnstile (Hardware Access Logs)</span>
-            <span class="badge bg-light text-dark">{{ logs.length }} Scan</span>
+            <span class="badge bg-white text-dark fw-bold">{{ logs.length }} Scan</span>
           </div>
           <div class="card-body p-0" style="max-height: 280px; overflow-y: auto;">
             <table class="table table-hover table-striped align-middle mb-0 small">
@@ -533,33 +533,34 @@ onMounted(refreshAll)
 
 /* Turnstile OLED & LED Box */
 .turnstile-display {
-  background: #1e293b;
+  background: linear-gradient(135deg, #00729c 0%, #00a8e8 100%);
   color: #ffffff;
-  border: 2px solid #334155;
+  border: 2px solid #5cd2ff;
   transition: all 0.3s ease;
   width: 100%;
 }
 
 .turnstile-standby {
-  border-color: #3b82f6;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.15);
+  border-color: #5cd2ff;
+  box-shadow: 0 8px 20px rgba(0, 168, 232, 0.2);
 }
 
 .turnstile-open {
-  background: #064e3b;
-  border-color: #10b981;
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  border-color: #6ee7b7;
+  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.35);
 }
 
 .turnstile-locked {
-  background: #7f1d1d;
-  border-color: #ef4444;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+  background: linear-gradient(135deg, #be123c 0%, #f43f5e 100%);
+  border-color: #fda4af;
+  box-shadow: 0 8px 22px rgba(244, 63, 94, 0.35);
 }
 
 .oled-screen {
-  background: #0f172a;
-  border: 1px solid #334155;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .oled-status-title {

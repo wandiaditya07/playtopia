@@ -12,6 +12,7 @@ export function signToken(user) {
       name: user.name,
       email: user.email,
       role: user.role_name,
+      role_id: user.role_id,
       outlet_id: user.outlet_id || 1
     },
     JWT_SECRET,
@@ -40,6 +41,7 @@ function readUserFromHeader(req, res) {
       name: payload.name,
       email: payload.email,
       role: payload.role,
+      role_id: payload.role_id,
       outlet_id: payload.outlet_id || 1,
       exp: payload.exp
     };
@@ -86,4 +88,3 @@ export async function requireGateOrUser(req, res, next) {
   }
   return requireAuth(req, res, next);
 }
-

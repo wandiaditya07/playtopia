@@ -28,12 +28,13 @@ export function fmtDateTime(value) {
   return d.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-/** Milidetik -> "07:59:12" untuk countdown sesi */
+/** Milidetik -> "07:59:12" untuk countdown sesi (aman dari NaN) */
 export function fmtCountdown(ms) {
-  const total = Math.max(0, Math.floor(ms / 1000))
+  const num = Number(ms)
+  if (!Number.isFinite(num) || num <= 0) return '00:00:00'
+  const total = Math.max(0, Math.floor(num / 1000))
   const h = String(Math.floor(total / 3600)).padStart(2, '0')
   const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0')
   const s = String(total % 60).padStart(2, '0')
   return `${h}:${m}:${s}`
 }
-

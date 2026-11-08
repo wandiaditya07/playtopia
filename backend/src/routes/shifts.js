@@ -40,15 +40,16 @@ async function getShiftStats(shiftId) {
   };
 }
 
-// GET /api/v1/shifts/current -> shift terbuka milik user yang login
+// GET /api/v1/shifts/current -> shift terbuka milik user atau outlet aktif
 router.get('/current', async (req, res) => {
   try {
+    const outletId = req.user.outlet_id || 1;
     const [shifts] = await pool.query(`
       SELECT s.*, u.name AS cashier_name
       FROM shifts s JOIN users u ON s.user_id = u.id
-      WHERE s.status = 'open' AND s.user_id = ?
-      ORDER BY s.id DESC LIMIT 1
-    `, [req.user.id]);
+      WHERE s.status = 'open' AND (s.user_id = ? OR s.outlet_id = ?)
+      ORDER BY (s.user_id = ?) DESC, s.id DESC LIMIT 1
+    `, [req.user.id, outletId, req.user.id]);
 
     if (shifts.length === 0) {
       return res.json({ success: true, data: null, message: 'Tidak ada shift yang sedang buka' });
@@ -60,6 +61,22 @@ router.get('/current', async (req, res) => {
       success: true,
       data: { shift, stats: { ...stats, expected_cash_drawer: shift.opening_cash + stats.cash_total } }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET /api/v1/shifts/history
+router.get('/history', async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT s.*, u.name AS cashier_name, o.name AS outlet_name
+      FROM shifts s
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN outlets o ON s.outlet_id = o.id
+      ORDER BY s.id DESC LIMIT 50
+    `);
+    res.json({ success: true, data: rows });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -92,14 +109,12 @@ router.post('/open', async (req, res) => {
 // POST /api/v1/shifts/close
 router.post('/close', async (req, res) => {
   try {
-    const shiftId = Number(req.body?.shift_id);
-    const counted = Number(req.body?.closing_cash_actual);
+    let shiftId = Number(req.body?.shift_id);
+    const countedRaw = req.body?.closing_cash_actual ?? req.body?.actual_closing_cash;
+    const counted = Number(countedRaw);
     const notes = String(req.body?.notes || '').trim();
     const ownerEmail = String(req.body?.owner_email || '').trim();
 
-    if (!Number.isInteger(shiftId)) {
-      return res.status(400).json({ success: false, message: 'Shift tidak valid.' });
-    }
     if (!Number.isFinite(counted) || counted < 0) {
       return res.status(400).json({ success: false, message: 'Uang fisik di laci harus berupa angka 0 atau lebih.' });
     }
@@ -107,8 +122,20 @@ router.post('/close', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Format email owner tidak valid.' });
     }
 
-    const [shifts] = await pool.query("SELECT * FROM shifts WHERE id = ? AND status = 'open'", [shiftId]);
-    const shift = shifts[0];
+    let shift;
+    if (Number.isInteger(shiftId) && shiftId > 0) {
+      const [shifts] = await pool.query("SELECT * FROM shifts WHERE id = ? AND status = 'open'", [shiftId]);
+      shift = shifts[0];
+    } else {
+      const outletId = req.user.outlet_id || 1;
+      const [shifts] = await pool.query(`
+        SELECT * FROM shifts
+        WHERE status = 'open' AND (user_id = ? OR outlet_id = ?)
+        ORDER BY (user_id = ?) DESC, id DESC LIMIT 1
+      `, [req.user.id, outletId, req.user.id]);
+      shift = shifts[0];
+    }
+
     if (!shift) {
       return res.status(404).json({ success: false, message: 'Shift tidak ditemukan atau sudah ditutup.' });
     }
@@ -133,7 +160,7 @@ router.post('/close', async (req, res) => {
     const report = `
 === LAPORAN CLOSING GABUNGAN PLAYGROUND & CAFE ===
 Shift   : #${shift.id}
-Kasir   : ${req.user.name}
+Petugas : ${req.user.name} (${req.user.role})
 Buka    : ${new Date(shift.opened_at).toLocaleString('id-ID')}
 Tutup   : ${new Date().toLocaleString('id-ID')}
 ------------------------------------------------
@@ -152,13 +179,21 @@ Kas Fisik        : ${rp(counted)}
 Selisih          : ${rp(variance)} ${variance === 0 ? '(PAS)' : variance > 0 ? '(LEBIH)' : '(KURANG)'}
 ------------------------------------------------
 Catatan: ${notes || '-'}
-Penerima laporan: ${ownerEmail || '-'} (pengiriman email belum diaktifkan - mode sandbox)
     `.trim();
 
     res.json({
       success: true,
       message: 'Closing shift berhasil disimpan.',
-      data: { shift_id: shift.id, total_revenue: stats.total_revenue, expected_cash: expected, actual_cash: counted, cash_variance: variance, report_email: report }
+      data: {
+        shift_id: shift.id,
+        shift,
+        stats: { ...stats, expected_cash_drawer: expected },
+        total_revenue: stats.total_revenue,
+        expected_cash: expected,
+        actual_cash: counted,
+        cash_variance: variance,
+        report_email: report
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

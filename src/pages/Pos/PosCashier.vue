@@ -66,22 +66,32 @@
       <div class="col-xl-8 mb-3">
         <div class="card h-100">
           <div class="card-body">
-            <ul class="nav nav-pills mb-3">
-              <li
-                v-for="tab in tabs"
-                :key="tab.value"
-                class="nav-item"
-              >
-                <button
-                  type="button"
-                  class="nav-link"
-                  :class="{ active: selectedCategory === tab.value }"
-                  @click="selectedCategory = tab.value"
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <ul class="nav nav-pills mb-0">
+                <li
+                  v-for="tab in tabs"
+                  :key="tab.value"
+                  class="nav-item"
                 >
-                  {{ tab.label }} ({{ tab.count }})
-                </button>
-              </li>
-            </ul>
+                  <button
+                    type="button"
+                    class="nav-link"
+                    :class="{ active: selectedCategory === tab.value }"
+                    @click="selectedCategory = tab.value"
+                  >
+                    {{ tab.label }} ({{ tab.count }})
+                  </button>
+                </li>
+              </ul>
+              <div style="min-width: 220px;">
+                <input
+                  v-model.trim="searchQuery"
+                  type="search"
+                  class="form-control form-control-sm"
+                  placeholder="🔍 Cari paket atau menu..."
+                >
+              </div>
+            </div>
 
             <div
               v-if="productsLoading"
@@ -93,7 +103,7 @@
               v-else-if="filteredProducts.length === 0"
               class="text-center text-muted py-5"
             >
-              Tidak ada produk.
+              Tidak ada produk yang cocok.
             </div>
 
             <div
@@ -107,27 +117,38 @@
               >
                 <button
                   type="button"
-                  class="product-card card h-100 w-100 text-start"
+                  class="product-card card h-100 w-100 text-start position-relative"
                   :class="p.category === 'PLAYGROUND' ? 'product-playground' : 'product-cafe'"
                   :disabled="!canEditCart"
                   @click="addToCart(p)"
                 >
                   <span class="card-body d-flex flex-column justify-content-between p-3">
                     <span>
-                      <span class="d-flex justify-content-between mb-2">
+                      <span class="d-flex justify-content-between align-items-center mb-2 gap-1">
                         <span
                           class="badge"
                           :class="p.category === 'PLAYGROUND' ? 'badge-play-sky' : 'badge-play-pink'"
                         >{{ p.category === 'PLAYGROUND' ? '🎡 Playground' : '☕ Cafe F&B' }}</span>
                         <span
                           v-if="p.category === 'PLAYGROUND'"
-                          class="badge bg-dark text-white fw-bold"
-                        >{{ p.is_open_play ? 'Sepuasnya' : p.duration_minutes + ' mnt' }}</span>
+                          class="badge fw-bold"
+                          :class="p.is_open_play ? 'badge-play-violet' : 'badge-play-amber'"
+                        >⏱️ {{ p.is_open_play ? 'Sepuasnya' : p.duration_minutes + ' mnt' }}</span>
                       </span>
                       <span class="d-block fw-bold text-dark fs-6">{{ p.name }}</span>
                       <span class="d-block small text-muted mt-1">{{ p.description }}</span>
                     </span>
-                    <span class="d-block mt-3 fs-5 fw-bold text-primary">{{ rupiah(p.price) }}</span>
+                    <span class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                      <span class="fs-5 fw-bold text-primary">{{ rupiah(p.price) }}</span>
+                      <span
+                        v-if="getCartQty(p.id) > 0"
+                        class="badge bg-success rounded-pill px-2 py-1"
+                      >✓ {{ getCartQty(p.id) }}x di Keranjang</span>
+                      <span
+                        v-else
+                        class="badge badge-play-sky rounded-pill px-2 py-1"
+                      >+ Tambah</span>
+                    </span>
                   </span>
                 </button>
               </div>
@@ -139,11 +160,14 @@
       <!-- Keranjang -->
       <div class="col-xl-4 mb-3">
         <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Keranjang</strong>
+          <div class="card-header card-header-sky d-flex justify-content-between align-items-center py-3">
+            <strong class="d-flex align-items-center gap-2">
+              <span>🛒 Keranjang Transaksi</span>
+              <span v-if="cart.length" class="badge bg-white text-primary rounded-pill">{{ cart.length }} item</span>
+            </strong>
             <button
               type="button"
-              class="btn btn-outline-danger btn-sm"
+              class="btn btn-light btn-sm fw-bold text-danger"
               :disabled="cart.length === 0 || submitting"
               @click="clearCart"
             >
@@ -552,8 +576,8 @@
             v-if="receipt.tickets.length"
             class="border-top mt-3 pt-3 text-center"
           >
-            <div class="badge bg-dark mb-2">
-              TIKET MASUK (QR)
+            <div class="badge badge-play-sky mb-2">
+              🎟️ TIKET MASUK (QR)
             </div>
             <div
               v-for="t in receipt.tickets"
@@ -620,6 +644,7 @@ const loadError = ref('')
 const activeVisitors = ref(0)
 
 const selectedCategory = ref('ALL')
+const searchQuery = ref('')
 const cart = ref([])
 
 const memberQuery = ref('')
@@ -645,11 +670,22 @@ const tabs = computed(() => [
   { value: 'CAFE', label: 'Cafe & Snack', count: products.value.filter(p => p.category === 'CAFE').length }
 ])
 
-const filteredProducts = computed(() =>
-  selectedCategory.value === 'ALL'
+const filteredProducts = computed(() => {
+  const byCat = selectedCategory.value === 'ALL'
     ? products.value
     : products.value.filter(p => p.category === selectedCategory.value)
-)
+  if (!searchQuery.value) return byCat
+  const q = searchQuery.value.toLowerCase()
+  return byCat.filter(p =>
+    String(p.name || '').toLowerCase().includes(q) ||
+    String(p.description || '').toLowerCase().includes(q)
+  )
+})
+
+function getCartQty(productId) {
+  const item = cart.value.find(i => i.product_id === productId)
+  return item ? item.qty : 0
+}
 
 const cartSubtotal = computed(() => cart.value.reduce((s, i) => s + i.price * i.qty, 0))
 const discountAmount = computed(() =>

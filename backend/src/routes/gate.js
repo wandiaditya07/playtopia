@@ -80,7 +80,7 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
       if (ticket.status === 'unused' || !ticket.first_in_at) {
         let endsAtSql = 'DATE_ADD(NOW(), INTERVAL (play_minutes + tolerance_minutes) MINUTE)';
         if (ticket.is_open_play || !ticket.play_minutes) {
-          endsAtSql = 'CONCAT(CURDATE(), " 23:59:59")';
+          endsAtSql = "CONCAT(CURDATE(), ' 23:59:59')";
         }
 
         await conn.query(`
@@ -323,7 +323,7 @@ router.post('/pay-overtime', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     const ticketId = Number(req.body?.ticket_id);
-    const cashGiven = Number(req.body?.cash_given);
+    const cashGiven = Number(req.body?.cash_given ?? req.body?.cash_received);
     if (!Number.isInteger(ticketId)) {
       return res.status(400).json({ success: false, message: 'Ticket ID wajib diisi' });
     }
@@ -354,7 +354,10 @@ router.post('/pay-overtime', async (req, res) => {
       return res.status(400).json({ success: false, message: `Uang diterima kurang dari denda (Rp ${fee.toLocaleString('id-ID')}).` });
     }
 
-    const [shifts] = await conn.query("SELECT id FROM shifts WHERE status = 'open' AND user_id = ? LIMIT 1", [req.user.id]);
+    const [shifts] = await conn.query(
+      "SELECT id FROM shifts WHERE status = 'open' AND (user_id = ? OR outlet_id = ?) ORDER BY (user_id = ?) DESC, id DESC LIMIT 1",
+      [req.user.id, req.user.outlet_id || 1, req.user.id]
+    );
     if (shifts.length === 0) {
       await conn.rollback();
       return res.status(409).json({ success: false, message: 'Belum ada shift yang dibuka.' });

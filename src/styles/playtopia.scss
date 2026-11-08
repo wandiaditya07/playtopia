@@ -1,164 +1,190 @@
 /* ========================================================
-   PLAYTOPIA BRAND THEME (Inspired by https://www.playtopia.id/)
+   PLAYTOPIA VIBRANT BRAND THEME (Inspired by https://www.playtopia.id/)
+   Bright, interactive, family-friendly & high contrast
    ======================================================== */
 
 :root {
-  --pt-sky: #5cd2ff;
+  --pt-sky: #38bdf8;
+  --pt-sky-deep: #0284c7;
   --pt-pink: #ff5cbc;
-  --pt-deep: #00729c;
-  --pt-navy: #00364d;
-  --pt-aqua: #80e9ee;
-  --pt-yellow: #ffb800;
-  --pt-green: #25d366;
-  --pt-red: #ff4757;
-  --pt-bg: #f4fafd;
+  --pt-pink-deep: #db2777;
+  --pt-amber: #ffb800;
+  --pt-mint: #10b981;
+  --pt-violet: #8b5cf6;
+  --pt-bg: #f0f9ff;
   --pt-card-bg: #ffffff;
-  --pt-border: #e2eef5;
+  --pt-border: #e0f2fe;
 }
 
-/* Background utama aplikasi */
-body, .content, .sing-dashboard {
+body, #app-root {
   background-color: var(--pt-bg) !important;
   color: #1e293b;
   font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
 }
 
-/* Sidebar Playtopia Brand */
-.sidebar {
-  background: linear-gradient(180deg, #002c3e 0%, #004561 100%) !important;
-  box-shadow: 4px 0 20px rgba(0, 44, 62, 0.15) !important;
-
-  .logo {
-    background-color: #ffffff !important;
-    padding: 12px 16px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-bottom: 2px solid #e6f4fa;
-
-    img.brand-logo {
-      max-height: 40px;
-      width: auto;
-      object-fit: contain;
-    }
-  }
-
-  .navTitle {
-    color: #80e9ee !important;
-    font-size: 11px !important;
-    font-weight: 700 !important;
-    letter-spacing: 1.2px !important;
-    text-transform: uppercase;
-    padding-left: 18px !important;
-    margin-top: 20px !important;
-  }
-
-  .nav {
-    li.headerLink {
-      margin: 4px 10px;
-
-      a.sidebar-link {
-        color: #d1ecf7 !important;
-        border-radius: 10px !important;
-        font-weight: 500 !important;
-        padding: 10px 14px !important;
-        transition: all 0.2s ease;
-
-        &:hover {
-          background-color: rgba(92, 210, 255, 0.18) !important;
-          color: #ffffff !important;
-          transform: translateX(3px);
-        }
-
-        &.router-link-active, &.active {
-          background: linear-gradient(135deg, #5cd2ff 0%, #00729c 100%) !important;
-          color: #ffffff !important;
-          font-weight: 700 !important;
-          box-shadow: 0 4px 12px rgba(92, 210, 255, 0.35) !important;
-        }
-      }
-    }
-  }
-}
-
-/* Header POS */
-.navbar.app-header {
-  background-color: #ffffff !important;
-  border-bottom: 1px solid #e2eef5 !important;
-  box-shadow: 0 2px 8px rgba(0, 114, 156, 0.05) !important;
-}
-
-/* Kartu & Widget Playtopia */
+/* Kartu & Container Playtopia */
 .card, .widget {
   background: #ffffff !important;
-  border: 1px solid var(--pt-border) !important;
-  border-radius: 14px !important;
-  box-shadow: 0 4px 14px rgba(0, 114, 156, 0.04) !important;
-  overflow: hidden;
+  border: 1.5px solid #e0f2fe !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.05) !important;
 
   .card-header {
-    background-color: #fcfefe !important;
-    border-bottom: 1px solid var(--pt-border) !important;
+    background: linear-gradient(135deg, #f8fdff 0%, #f0f9ff 100%) !important;
+    border-bottom: 1.5px solid #e0f2fe !important;
     font-weight: 700;
-    color: var(--pt-navy);
+    color: #0369a1;
+    padding: 14px 18px;
   }
 }
 
-/* Tombol Brand Playtopia */
+/* Header Card Berwarna Cerah (Pengganti bg-dark yang gelap) */
+.card-header-sky {
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.card-header-pink {
+  background: linear-gradient(135deg, #ff5cbc 0%, #db2777 100%) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.card-header-mint {
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+.card-header-violet {
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+}
+
+/* Tombol Interaktif Playtopia */
+.btn {
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .btn-play-sky {
-  background: linear-gradient(135deg, #5cd2ff 0%, #00729c 100%) !important;
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
   color: #ffffff !important;
   border: none !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(92, 210, 255, 0.3) !important;
-  transition: all 0.2s ease;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28) !important;
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #42c8f8 0%, #005a7d 100%) !important;
-    box-shadow: 0 6px 16px rgba(92, 210, 255, 0.45) !important;
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%) !important;
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4) !important;
   }
 
   &:disabled {
-    opacity: 0.55 !important;
+    background: #cbd5e1 !important;
+    color: #64748b !important;
+    opacity: 0.75 !important;
     box-shadow: none !important;
     cursor: not-allowed !important;
+    transform: none !important;
   }
 }
 
 .btn-play-pink {
-  background: linear-gradient(135deg, #ff5cbc 0%, #99005b 100%) !important;
+  background: linear-gradient(135deg, #ff5cbc 0%, #db2777 100%) !important;
   color: #ffffff !important;
   border: none !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 12px rgba(255, 92, 188, 0.3) !important;
-  transition: all 0.2s ease;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(219, 39, 119, 0.28) !important;
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #f542ab 0%, #80004c 100%) !important;
-    box-shadow: 0 6px 16px rgba(255, 92, 188, 0.45) !important;
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #f43f5e 0%, #be185d 100%) !important;
+    box-shadow: 0 6px 20px rgba(219, 39, 119, 0.4) !important;
   }
 
   &:disabled {
-    opacity: 0.55 !important;
+    background: #cbd5e1 !important;
+    color: #64748b !important;
+    opacity: 0.75 !important;
     box-shadow: none !important;
     cursor: not-allowed !important;
+    transform: none !important;
   }
 }
 
-/* Badge Playtopia */
+.btn-play-mint {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28) !important;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+  }
+
+  &:disabled {
+    background: #cbd5e1 !important;
+    color: #64748b !important;
+    opacity: 0.75 !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+  }
+}
+
+.btn-play-amber {
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.28) !important;
+}
+
+/* Badges Cerah & Kontras Tinggi (Bukan Hitam Gelap) */
 .badge-play-sky {
-  background-color: #e3f7ff !important;
-  color: #00729c !important;
-  font-weight: 600;
-  border: 1px solid #b8ebff;
+  background-color: #e0f7ff !important;
+  color: #0369a1 !important;
+  font-weight: 700;
+  border: 1px solid #7dd3fc;
 }
 
 .badge-play-pink {
-  background-color: #ffe6f5 !important;
-  color: #99005b !important;
-  font-weight: 600;
-  border: 1px solid #ffc2ea;
+  background-color: #fce7f3 !important;
+  color: #be185d !important;
+  font-weight: 700;
+  border: 1px solid #f9a8d4;
 }
 
+.badge-play-amber {
+  background-color: #fef3c7 !important;
+  color: #b45309 !important;
+  font-weight: 700;
+  border: 1px solid #fcd34d;
+}
+
+.badge-play-violet {
+  background-color: #ede9fe !important;
+  color: #6d28d9 !important;
+  font-weight: 700;
+  border: 1px solid #c4b5fd;
+}
+
+.badge-play-mint {
+  background-color: #d1fae5 !important;
+  color: #047857 !important;
+  font-weight: 700;
+  border: 1px solid #6ee7b7;
+}

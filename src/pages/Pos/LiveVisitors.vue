@@ -53,8 +53,8 @@
 
     <!-- Visitors Table -->
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 fw-bold">Daftar Tiket & Durasi Bermain</h6>
+      <div class="card-header card-header-sky py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold">🎡 Daftar Tiket &amp; Durasi Bermain</h6>
         <small class="text-white-50">Auto-refresh setiap 5 detik</small>
       </div>
       <div class="card-body p-0">

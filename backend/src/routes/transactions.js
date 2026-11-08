@@ -19,11 +19,15 @@ router.get('/', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const [rows] = await pool.query(`
-      SELECT o.*, o.order_no AS invoice_number, o.total AS total_amount, p.method AS payment_method,
+      SELECT o.*, o.order_no AS invoice_number, o.order_no AS order_number, o.total AS total_amount,
+        o.member_discount AS discount_amount, p.method AS payment_method,
+        u.name AS cashier_name, m.name AS member_name,
         (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS total_items,
         (SELECT GROUP_CONCAT(product_name SEPARATOR ', ') FROM order_items oi WHERE oi.order_id = o.id) AS items_summary
       FROM orders o
       LEFT JOIN payments p ON p.order_id = o.id
+      LEFT JOIN users u ON o.cashier_id = u.id
+      LEFT JOIN members m ON o.member_id = m.id
       ORDER BY o.id DESC
       LIMIT ?
     `, [limit]);
@@ -76,13 +80,16 @@ router.post('/', async (req, res) => {
 
     await conn.beginTransaction();
 
-    // ---------- Shift milik user yang login ----------
-    const [shifts] = await conn.query("SELECT id FROM shifts WHERE status = 'open' AND user_id = ? LIMIT 1", [req.user.id]);
+    // ---------- Shift milik user yang login atau shift terbuka di outlet ----------
+    const outlet_id = req.user.outlet_id || 1;
+    const [shifts] = await conn.query(
+      "SELECT id FROM shifts WHERE status = 'open' AND (user_id = ? OR outlet_id = ?) ORDER BY (user_id = ?) DESC, id DESC LIMIT 1",
+      [req.user.id, outlet_id, req.user.id]
+    );
     if (shifts.length === 0) {
       throw new HttpError(409, 'Belum ada shift yang dibuka. Buka shift terlebih dahulu di menu Closing Shift.');
     }
     const shift_id = shifts[0].id;
-    const outlet_id = req.user.outlet_id || 1;
 
     // ---------- Harga & data produk SELALU dari database ----------
     const ids = [...new Set(items.map(i => i.product_id))];

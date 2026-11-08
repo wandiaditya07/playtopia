@@ -10,6 +10,7 @@ import gateRouter from './routes/gate.js';
 import membersRouter from './routes/members.js';
 import shiftsRouter from './routes/shifts.js';
 import simulatorRouter from './routes/simulator.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -36,6 +37,7 @@ app.use('/api/v1/transactions', requireAuth, transactionsRouter);
 app.use('/api/v1/members', requireAuth, membersRouter);
 app.use('/api/v1/shifts', requireAuth, shiftsRouter);
 app.use('/api/v1/simulator', requireAuth, simulatorRouter);
+app.use('/api/v1/admin', requireAuth, adminRouter);
 
 // Route tidak dikenal -> JSON, bukan HTML
 app.use('/api', (req, res) => {

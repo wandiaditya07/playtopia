@@ -74,9 +74,9 @@
       <!-- Left: Revenue & Breakdown -->
       <div class="col-lg-7">
         <div class="card shadow-sm border-0 mb-3">
-          <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+          <div class="card-header card-header-sky py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 fw-bold">📊 Rekap Penjualan Shift #{{ currentShiftData.shift.id }}</h6>
-            <span class="badge bg-success">Status: AKTIF</span>
+            <span class="badge bg-white text-success fw-bold">Status: AKTIF</span>
           </div>
           <div class="card-body p-4">
             <div class="row g-3 mb-4">
