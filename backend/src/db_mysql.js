@@ -570,8 +570,14 @@ async function runSeedQueries(conn) {
          VALUES (?, 1, ?, ?, ?, 1, NOW(), NOW())`,
         [u.role_id, u.name, u.email, bcrypt.hashSync(u.password, 10)]
       );
-    } else if (!String(rows[0].password_hash).startsWith('$2')) {
-      await conn.query('UPDATE users SET password_hash = ?, role_id = ? WHERE id = ?', [bcrypt.hashSync(u.password, 10), u.role_id, rows[0].id]);
+    } else {
+      const hashMatches = String(rows[0].password_hash).startsWith('$2') && bcrypt.compareSync(u.password, String(rows[0].password_hash));
+      if (!hashMatches || Number(rows[0].role_id) !== u.role_id) {
+        await conn.query(
+          'UPDATE users SET password_hash = ?, role_id = ?, is_active = 1 WHERE id = ?',
+          [bcrypt.hashSync(u.password, 10), u.role_id, rows[0].id]
+        );
+      }
     }
   }
 
