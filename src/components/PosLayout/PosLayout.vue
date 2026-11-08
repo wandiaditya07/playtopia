@@ -3,9 +3,11 @@
     <!-- Mobile backdrop -->
     <div v-if="mobileOpen" class="pt-mobile-backdrop" @click="mobileOpen = false" />
 
-    <!-- Sidebar -->
+    <!-- Sidebar (Auto-expand on hover, auto-minimize when cursor leaves sidebar) -->
     <PosSidebar
       :collapsed="isCollapsed"
+      @mouseenter-sidebar="onSidebarEnter"
+      @mouseleave-sidebar="onSidebarLeave"
       @close-mobile="mobileOpen = false"
     />
 
@@ -40,11 +42,20 @@ import PosSidebar from './PosSidebar.vue'
 import PosHeader from './PosHeader.vue'
 
 const auth = usePosAuthStore()
-const isCollapsed = ref(false)
+// Default minimized when not hovered; expands on hover or manual toggle
+const isCollapsed = ref(true)
 const mobileOpen = ref(false)
 
 function toggleSidebar() {
   isCollapsed.value = !isCollapsed.value
+}
+
+function onSidebarEnter() {
+  isCollapsed.value = false
+}
+
+function onSidebarLeave() {
+  isCollapsed.value = true
 }
 </script>
 
@@ -53,7 +64,7 @@ function toggleSidebar() {
   display: flex;
   min-height: 100vh;
   width: 100%;
-  background: linear-gradient(180deg, #f0f9ff 0%, #fdf4ff 50%, #f8fafc 100%);
+  background: #f8fafc;
   overflow-x: hidden;
 }
 
@@ -76,8 +87,8 @@ function toggleSidebar() {
   padding: 12px 24px;
   font-size: 12px;
   color: #64748b;
-  background: rgba(255, 255, 255, 0.8);
-  border-top: 1px solid #e0f2fe;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -88,7 +88,7 @@
                   v-model.trim="searchQuery"
                   type="search"
                   class="form-control form-control-sm"
-                  placeholder="🔍 Cari paket atau menu..."
+                  placeholder="Cari paket atau menu..."
                 >
               </div>
             </div>
@@ -128,12 +128,12 @@
                         <span
                           class="badge"
                           :class="p.category === 'PLAYGROUND' ? 'badge-play-sky' : 'badge-play-pink'"
-                        >{{ p.category === 'PLAYGROUND' ? '🎡 Playground' : '☕ Cafe F&B' }}</span>
+                        >{{ p.category === 'PLAYGROUND' ? 'Playground' : 'Cafe F&B' }}</span>
                         <span
                           v-if="p.category === 'PLAYGROUND'"
                           class="badge fw-bold"
                           :class="p.is_open_play ? 'badge-play-violet' : 'badge-play-amber'"
-                        >⏱️ {{ p.is_open_play ? 'Sepuasnya' : p.duration_minutes + ' mnt' }}</span>
+                        >{{ p.is_open_play ? 'Sepuasnya' : p.duration_minutes + ' mnt' }}</span>
                       </span>
                       <span class="d-block fw-bold text-dark fs-6">{{ p.name }}</span>
                       <span class="d-block small text-muted mt-1">{{ p.description }}</span>
@@ -162,7 +162,7 @@
         <div class="card">
           <div class="card-header card-header-sky d-flex justify-content-between align-items-center py-3">
             <strong class="d-flex align-items-center gap-2">
-              <span>🛒 Keranjang Transaksi</span>
+              <span>Keranjang Transaksi</span>
               <span v-if="cart.length" class="badge bg-white text-primary rounded-pill">{{ cart.length }} item</span>
             </strong>
             <button

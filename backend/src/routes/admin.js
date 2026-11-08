@@ -52,7 +52,7 @@ router.get('/dashboard', async (req, res) => {
     `);
 
     const [unitSales] = await pool.query(`
-      SELECT bu.code, bu.name, COALESCE(SUM(oi.line_total), 0) AS revenue, COALESCE(SUM(oi.qty), 0) AS qty_sold
+      SELECT bu.code, bu.name, COALESCE(SUM(oi.line_total), 0) AS revenue, COALESCE(SUM(oi.quantity), 0) AS qty_sold
       FROM business_units bu
       LEFT JOIN products p ON p.business_unit_id = bu.id AND p.sku <> 'OT-FEE'
       LEFT JOIN order_items oi ON oi.product_id = p.id
@@ -167,7 +167,7 @@ router.put('/roles-matrix', requireRole('Admin'), async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const [users] = await pool.query(`
-      SELECT u.id, u.role_id, u.outlet_id, u.name, u.email, u.phone, u.is_active, u.last_login_at, u.created_at,
+      SELECT u.id, u.role_id, u.outlet_id, u.name, u.email, u.is_active, u.last_login_at, u.created_at,
              r.name AS role_name, o.name AS outlet_name
       FROM users u
       JOIN roles r ON u.role_id = r.id
@@ -189,10 +189,9 @@ router.post('/users', requireRole('Admin'), async (req, res) => {
     const password = String(req.body?.password || '').trim();
     const roleId = Number(req.body?.role_id);
     const outletId = Number(req.body?.outlet_id) || 1;
-    const phone = String(req.body?.phone || '').trim() || null;
 
-    if (!name || !email || password.length < 6 || !Number.isInteger(roleId)) {
-      return res.status(400).json({ success: false, message: 'Nama, email, role, dan password (min 6 karakter) wajib diisi.' });
+    if (!name || !email || password.length < 4 || !Number.isInteger(roleId)) {
+      return res.status(400).json({ success: false, message: 'Nama, email, role, dan password (min 4 karakter) wajib diisi.' });
     }
 
     const [dup] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
@@ -202,9 +201,9 @@ router.post('/users', requireRole('Admin'), async (req, res) => {
 
     const hash = bcrypt.hashSync(password, 10);
     const [info] = await pool.query(
-      `INSERT INTO users (role_id, outlet_id, name, email, phone, password_hash, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
-      [roleId, outletId, name, email, phone, hash]
+      `INSERT INTO users (role_id, outlet_id, name, email, password_hash, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+      [roleId, outletId, name, email, hash]
     );
     await logAudit(req, 'CREATE_USER', 'users', info.insertId, { name, email, roleId });
     res.status(201).json({ success: true, message: 'User baru berhasil ditambahkan!', data: { id: info.insertId } });
@@ -505,7 +504,7 @@ router.get('/system-data', async (req, res) => {
       ORDER BY al.id DESC LIMIT 50
     `);
     const [itemSales] = await pool.query(`
-      SELECT p.id, oi.product_name AS name, p.sku, bu.name AS unit_name, SUM(oi.qty) AS total_qty, SUM(oi.line_total) AS total_revenue
+      SELECT p.id, oi.product_name AS name, p.sku, bu.name AS unit_name, SUM(oi.quantity) AS total_qty, SUM(oi.line_total) AS total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id AND o.status = 'paid'
       LEFT JOIN products p ON oi.product_id = p.id

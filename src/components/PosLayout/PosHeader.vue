@@ -1,54 +1,44 @@
 <template>
   <header class="pt-header d-print-none">
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-3">
       <!-- Desktop collapse button -->
       <button
         type="button"
         class="btn btn-sm btn-light border d-none d-lg-inline-flex align-items-center justify-content-center"
-        style="width: 36px; height: 36px; border-radius: 10px;"
+        style="width: 34px; height: 34px; border-radius: 8px; color: #475569;"
         title="Sembunyikan / Tampilkan Sidebar"
         @click="$emit('toggle-sidebar')"
       >
-        ☰
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
       </button>
 
       <!-- Mobile drawer button -->
       <button
         type="button"
         class="btn btn-sm btn-light border d-lg-none d-inline-flex align-items-center justify-content-center"
-        style="width: 36px; height: 36px; border-radius: 10px;"
+        style="width: 34px; height: 34px; border-radius: 8px; color: #475569;"
         title="Buka Menu"
         @click="$emit('toggle-mobile')"
       >
-        ☰
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
       </button>
 
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <h5 class="m-0 fw-bold text-dark">{{ pageTitle }}</h5>
-        <span class="badge rounded-pill badge-play-sky d-none d-md-inline-block">
-          🎡 Playtopia Playground &amp; Cafe
-        </span>
-      </div>
+      <h6 class="m-0 fw-semibold text-dark">{{ pageTitle }}</h6>
     </div>
 
     <!-- Right Controls -->
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <!-- Active Role Pill -->
-      <span
-        class="badge rounded-pill px-3 py-2 d-none d-md-inline-flex align-items-center gap-1"
-        :class="rolePillClass"
-      >
-        <span>{{ roleIcon }}</span>
-        <span>{{ auth.user?.role || 'Staff' }}</span>
-      </span>
-
-      <!-- Session Countdown (Fixed NaN -> Real Timer!) -->
+      <!-- Session Countdown -->
       <div
-        class="pt-session-pill d-none d-sm-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill"
+        class="pt-session-pill d-none d-sm-inline-flex align-items-center gap-1 px-2.5 py-1 rounded-2"
         :class="auth.isExpiringSoon ? 'session-danger' : 'session-normal'"
         :title="'Sesi JWT berakhir pada: ' + expiresLabel"
       >
-        <span>⏱️ Sesi:</span>
+        <span class="text-muted">Sesi:</span>
         <strong class="font-monospace">{{ countdown }}</strong>
       </div>
 
@@ -56,65 +46,60 @@
       <a
         href="/customer-display"
         target="_blank"
-        class="btn btn-sm btn-play-pink rounded-pill px-3 py-1 d-none d-xl-inline-flex align-items-center gap-1"
+        class="btn btn-sm btn-outline-primary px-3 py-1 d-none d-xl-inline-flex align-items-center gap-1"
+        style="font-size: 12.5px; border-radius: 8px;"
       >
-        <span>🖥️</span>
-        <span>Layar Pelanggan</span>
+        Layar Pelanggan
       </a>
 
       <!-- User Profile Dropdown -->
       <div class="dropdown">
         <button
           id="userDropdownBtn"
-          class="btn btn-light border rounded-pill d-flex align-items-center gap-2 py-1 px-2"
+          class="btn btn-light border d-flex align-items-center gap-2 py-1 px-2"
+          style="border-radius: 8px;"
           type="button"
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
-          <span class="pt-avatar rounded-circle text-white fw-bold">
+          <span class="pt-avatar text-white fw-semibold">
             {{ firstLetter }}
           </span>
           <div class="d-none d-md-block text-start lh-1 pe-1">
-            <div class="fw-bold text-dark" style="font-size: 12.5px;">{{ auth.user?.name || 'Petugas' }}</div>
-            <small class="text-muted" style="font-size: 10.5px;">{{ auth.user?.email }}</small>
+            <div class="fw-semibold text-dark" style="font-size: 12.5px;">{{ auth.user?.name || 'Petugas' }}</div>
+            <small class="text-muted" style="font-size: 10.5px;">{{ auth.user?.role || 'Staff' }}</small>
           </div>
         </button>
 
-        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 p-2" style="min-width: 240px; border-radius: 14px;">
-          <li class="px-3 py-2 bg-light rounded-3 mb-2">
-            <div class="fw-bold text-dark">{{ auth.user?.name }}</div>
-            <div class="small text-muted">{{ auth.user?.email }}</div>
-            <div class="mt-1">
-              <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                Role: {{ auth.user?.role }}
-              </span>
-            </div>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm border mt-2 p-2" style="min-width: 220px; border-radius: 10px;">
+          <li class="px-3 py-2 bg-light rounded-2 mb-1">
+            <div class="fw-semibold text-dark" style="font-size: 13px;">{{ auth.user?.name }}</div>
+            <div class="text-muted" style="font-size: 11.5px;">{{ auth.user?.email }}</div>
             <div class="text-muted mt-1" style="font-size: 11px;">
-              Berakhir: {{ expiresLabel }}
+              Role: <strong>{{ auth.user?.role }}</strong>
             </div>
           </li>
 
           <li v-if="auth.user?.role === 'Admin'">
-            <router-link class="dropdown-item rounded-2 py-2 fw-semibold" to="/app/system/roles">
-              🛡️ Atur Role &amp; Hak Akses Menu
+            <router-link class="dropdown-item rounded-2 py-1.5 small" to="/app/system/roles">
+              Role &amp; Hak Akses Menu
             </router-link>
           </li>
           <li v-if="auth.user?.role === 'Admin'">
-            <router-link class="dropdown-item rounded-2 py-2 fw-semibold" to="/app/system/users">
-              👥 Manajemen User &amp; Staff
+            <router-link class="dropdown-item rounded-2 py-1.5 small" to="/app/system/users">
+              Manajemen Pengguna
             </router-link>
           </li>
 
           <li><hr class="dropdown-divider my-1"></li>
           <li>
             <button
-              class="dropdown-item rounded-2 py-2 text-danger fw-bold d-flex align-items-center gap-2"
+              class="dropdown-item rounded-2 py-1.5 small text-danger fw-semibold"
               type="button"
               :disabled="loggingOut"
               @click="logout"
             >
-              <span>🚪</span>
-              <span>{{ loggingOut ? 'Keluar...' : 'Ganti Akun / Log Out' }}</span>
+              {{ loggingOut ? 'Keluar...' : 'Keluar (Log Out)' }}
             </button>
           </li>
         </ul>
@@ -145,21 +130,6 @@ const firstLetter = computed(() => {
   return name.charAt(0).toUpperCase()
 })
 
-const roleIcon = computed(() => {
-  const r = auth.user?.role
-  if (r === 'Admin') return '🛡️'
-  if (r === 'Client') return '👑'
-  return '🧑‍💻'
-})
-
-const rolePillClass = computed(() => {
-  const r = auth.user?.role
-  if (r === 'Admin') return 'badge-play-pink'
-  if (r === 'Client') return 'bg-warning-subtle text-warning-emphasis border border-warning'
-  return 'badge-play-sky'
-})
-
-// Menggunakan remainingMs (milidetik) sehingga tidak pernah NaN!
 const countdown = computed(() => fmtCountdown(auth.remainingMs))
 
 const expiresLabel = computed(() => {
@@ -179,10 +149,10 @@ function logout() {
 
 <style scoped>
 .pt-header {
-  height: 68px;
+  height: 64px;
   padding: 0 24px;
   background: #ffffff;
-  border-bottom: 2px solid #e0f2fe;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -190,14 +160,14 @@ function logout() {
   position: sticky;
   top: 0;
   z-index: 1020;
-  box-shadow: 0 2px 12px rgba(2, 132, 199, 0.05);
 }
 
 .pt-session-pill {
-  font-size: 12.5px;
-  border: 1px solid #fde68a;
-  background: #fffbeb;
-  color: #b45309;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
 }
 
 .pt-session-pill.session-danger {
@@ -207,12 +177,13 @@ function logout() {
 }
 
 .pt-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #38bdf8 0%, #ec4899 100%);
-  font-size: 14px;
+  background: #0284c7;
+  font-size: 13px;
 }
 </style>

@@ -1,18 +1,18 @@
 <template>
   <div class="system-users-page">
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-4 shadow-sm border">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-3 shadow-sm border">
       <div>
-        <h4 class="mb-0 fw-bold text-dark">
-          👥 Manajemen Pengguna &amp; Penugasan Role
-        </h4>
+        <h5 class="mb-0 fw-bold text-dark">
+          Manajemen Pengguna &amp; Penugasan Role
+        </h5>
         <small class="text-muted">
           Kelola akun Admin, Owner (Client), dan Staff Kasir beserta penugasan outlet dan role grup menunya.
         </small>
       </div>
       <button
         type="button"
-        class="btn btn-play-sky fw-bold"
+        class="btn btn-primary btn-sm fw-semibold"
         :disabled="!auth.can('system.users', 'create')"
         @click="openCreateModal"
       >
@@ -38,7 +38,7 @@
                 <th>ID</th>
                 <th>Nama Lengkap</th>
                 <th>Email Login</th>
-                <th>No. HP</th>
+                <th>Cabang Outlet</th>
                 <th>Role Akses</th>
                 <th>Status</th>
                 <th>Login Terakhir</th>
@@ -50,13 +50,13 @@
                 <td>#{{ u.id }}</td>
                 <td class="fw-bold text-dark">{{ u.name }}</td>
                 <td class="font-monospace text-primary">{{ u.email }}</td>
-                <td>{{ u.phone || '-' }}</td>
+                <td>{{ u.outlet_name || 'Playtopia Senayan Park' }}</td>
                 <td>
                   <span
                     class="badge"
                     :class="u.role_name === 'Admin' ? 'badge-play-sky' : u.role_name === 'Client' ? 'badge-play-amber' : 'badge-play-pink'"
                   >
-                    {{ u.role_name === 'Admin' ? '🛡️ Admin' : u.role_name === 'Client' ? '👑 Owner (Client)' : '🧑‍💼 Kasir (Staff)' }}
+                    {{ u.role_name === 'Admin' ? 'Admin' : u.role_name === 'Client' ? 'Owner (Client)' : 'Kasir (Staff)' }}
                   </span>
                 </td>
                 <td>
@@ -71,7 +71,7 @@
                     class="btn btn-sm btn-outline-primary"
                     @click="openEditModal(u)"
                   >
-                    ✏️ Edit Role / Akun
+                    Edit Role / Akun
                   </button>
                 </td>
               </tr>
@@ -248,3 +248,4 @@ async function submitUser() {
 
 onMounted(loadUsers)
 </script>
+

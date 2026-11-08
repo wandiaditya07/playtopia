@@ -29,7 +29,7 @@ const ROUTE_MAP = {
   business_units: '/app/business-units',
   sales_report: '/app/reports/sales',
   item_report: '/app/reports/items',
-  closing: '/app/closing',
+  closing: '/app/reports/closing',
   report_schedules: '/app/reports/schedules',
   backups: '/app/reports/backups',
   outlets: '/app/system/outlets',
