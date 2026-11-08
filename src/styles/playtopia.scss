@@ -1,0 +1,164 @@
+/* ========================================================
+   PLAYTOPIA BRAND THEME (Inspired by https://www.playtopia.id/)
+   ======================================================== */
+
+:root {
+  --pt-sky: #5cd2ff;
+  --pt-pink: #ff5cbc;
+  --pt-deep: #00729c;
+  --pt-navy: #00364d;
+  --pt-aqua: #80e9ee;
+  --pt-yellow: #ffb800;
+  --pt-green: #25d366;
+  --pt-red: #ff4757;
+  --pt-bg: #f4fafd;
+  --pt-card-bg: #ffffff;
+  --pt-border: #e2eef5;
+}
+
+/* Background utama aplikasi */
+body, .content, .sing-dashboard {
+  background-color: var(--pt-bg) !important;
+  color: #1e293b;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Sidebar Playtopia Brand */
+.sidebar {
+  background: linear-gradient(180deg, #002c3e 0%, #004561 100%) !important;
+  box-shadow: 4px 0 20px rgba(0, 44, 62, 0.15) !important;
+
+  .logo {
+    background-color: #ffffff !important;
+    padding: 12px 16px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 2px solid #e6f4fa;
+
+    img.brand-logo {
+      max-height: 40px;
+      width: auto;
+      object-fit: contain;
+    }
+  }
+
+  .navTitle {
+    color: #80e9ee !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1.2px !important;
+    text-transform: uppercase;
+    padding-left: 18px !important;
+    margin-top: 20px !important;
+  }
+
+  .nav {
+    li.headerLink {
+      margin: 4px 10px;
+
+      a.sidebar-link {
+        color: #d1ecf7 !important;
+        border-radius: 10px !important;
+        font-weight: 500 !important;
+        padding: 10px 14px !important;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: rgba(92, 210, 255, 0.18) !important;
+          color: #ffffff !important;
+          transform: translateX(3px);
+        }
+
+        &.router-link-active, &.active {
+          background: linear-gradient(135deg, #5cd2ff 0%, #00729c 100%) !important;
+          color: #ffffff !important;
+          font-weight: 700 !important;
+          box-shadow: 0 4px 12px rgba(92, 210, 255, 0.35) !important;
+        }
+      }
+    }
+  }
+}
+
+/* Header POS */
+.navbar.app-header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2eef5 !important;
+  box-shadow: 0 2px 8px rgba(0, 114, 156, 0.05) !important;
+}
+
+/* Kartu & Widget Playtopia */
+.card, .widget {
+  background: #ffffff !important;
+  border: 1px solid var(--pt-border) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 14px rgba(0, 114, 156, 0.04) !important;
+  overflow: hidden;
+
+  .card-header {
+    background-color: #fcfefe !important;
+    border-bottom: 1px solid var(--pt-border) !important;
+    font-weight: 700;
+    color: var(--pt-navy);
+  }
+}
+
+/* Tombol Brand Playtopia */
+.btn-play-sky {
+  background: linear-gradient(135deg, #5cd2ff 0%, #00729c 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(92, 210, 255, 0.3) !important;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #42c8f8 0%, #005a7d 100%) !important;
+    box-shadow: 0 6px 16px rgba(92, 210, 255, 0.45) !important;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.55 !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+  }
+}
+
+.btn-play-pink {
+  background: linear-gradient(135deg, #ff5cbc 0%, #99005b 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(255, 92, 188, 0.3) !important;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #f542ab 0%, #80004c 100%) !important;
+    box-shadow: 0 6px 16px rgba(255, 92, 188, 0.45) !important;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.55 !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+  }
+}
+
+/* Badge Playtopia */
+.badge-play-sky {
+  background-color: #e3f7ff !important;
+  color: #00729c !important;
+  font-weight: 600;
+  border: 1px solid #b8ebff;
+}
+
+.badge-play-pink {
+  background-color: #ffe6f5 !important;
+  color: #99005b !important;
+  font-weight: 600;
+  border: 1px solid #ffc2ea;
+}
+
