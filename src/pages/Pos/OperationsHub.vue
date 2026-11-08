@@ -138,50 +138,117 @@
     </div>
 
     <!-- 3. ACCESS LOGS & VISITORS REPORT -->
-    <div v-else-if="section === 'access_logs' || section === 'visitors_report'" class="pt-panel">
-      <div class="pt-panel-header d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-          <span class="fw-semibold text-dark">Log Akses Turnstile Gate</span>
+    <template v-else-if="section === 'access_logs' || section === 'visitors_report'">
+      <!-- Summary Metrics -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Total Aktivitas Scan</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-dark">{{ accessLogs.length }}</span>
+              <span class="pt-tag">Semua Jalur</span>
+            </div>
+          </div>
         </div>
-        <span class="pt-tag">{{ accessLogs.length }} Aktivitas</span>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Akses Diizinkan</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-success">{{ accessLogs.filter(l => l.is_allowed).length }}</span>
+              <span class="pt-status-badge allowed">Valid</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Akses Ditolak</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-danger">{{ accessLogs.filter(l => !l.is_allowed).length }}</span>
+              <span class="pt-status-badge denied">Ditolak</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted fw-medium" style="font-size: 12px;">Rasio Masuk / Keluar</div>
+            <div class="d-flex align-items-baseline justify-content-between mt-1">
+              <span class="pt-stat-val text-dark">
+                {{ accessLogs.filter(l => String(l.direction).toUpperCase() === 'IN').length }}
+                <span class="text-muted fw-normal" style="font-size: 15px;">/ {{ accessLogs.filter(l => String(l.direction).toUpperCase() === 'OUT').length }}</span>
+              </span>
+              <span class="pt-tag">IN / OUT</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="table-responsive">
-        <table class="table pt-table align-middle mb-0">
-          <thead>
-            <tr>
-              <th style="width: 190px;">Waktu Scan</th>
-              <th style="width: 120px;">Jalur Gate</th>
-              <th>Kode Tiket / Kredensial</th>
-              <th style="width: 160px;">Status Gate</th>
-              <th>Keterangan</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="accessLogs.length === 0">
-              <td colspan="5" class="text-center text-muted py-4">Belum ada aktivitas scan gate.</td>
-            </tr>
-            <tr v-for="l in accessLogs" :key="l.id">
-              <td class="font-monospace text-muted" style="font-size: 12.5px;">{{ fmtDateTime(l.scanned_at) }}</td>
-              <td>
-                <span class="pt-dir-badge" :class="String(l.direction).toUpperCase() === 'IN' ? 'in' : 'out'">
-                  {{ String(l.direction).toUpperCase() === 'IN' ? 'MASUK (IN)' : 'KELUAR (OUT)' }}
-                </span>
-              </td>
-              <td class="font-monospace fw-semibold text-dark">{{ l.ticket_code || l.credential_value }}</td>
-              <td>
-                <span class="pt-status-badge" :class="l.is_allowed ? 'allowed' : 'denied'">
-                  {{ l.is_allowed ? 'Diizinkan' : 'Ditolak' }}
-                </span>
-              </td>
-              <td class="text-muted" style="font-size: 12.5px;">{{ l.deny_reason || 'Akses valid' }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+      <div class="pt-panel">
+        <div class="pt-panel-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+            <span class="fw-semibold text-dark">Daftar Riwayat Scan Turnstile Gate</span>
+            <span class="pt-tag">{{ filteredAccessLogs.length }} Data</span>
+          </div>
+
+          <!-- Clean Filter Controls -->
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <input
+              v-model.trim="logSearch"
+              type="text"
+              class="form-control form-control-sm"
+              style="width: 190px; font-size: 12.5px;"
+              placeholder="Cari kode tiket..."
+            >
+            <select v-model="logDirFilter" class="form-select form-select-sm" style="width: 130px; font-size: 12.5px;">
+              <option value="ALL">Semua Jalur</option>
+              <option value="IN">Masuk (IN)</option>
+              <option value="OUT">Keluar (OUT)</option>
+            </select>
+            <select v-model="logStatusFilter" class="form-select form-select-sm" style="width: 135px; font-size: 12.5px;">
+              <option value="ALL">Semua Status</option>
+              <option value="ALLOWED">Diizinkan</option>
+              <option value="DENIED">Ditolak</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table pt-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 190px;">Waktu Scan</th>
+                <th style="width: 130px;">Jalur Gate</th>
+                <th>Kode Tiket / Kredensial</th>
+                <th style="width: 150px;">Status Gate</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="filteredAccessLogs.length === 0">
+                <td colspan="5" class="text-center text-muted py-4">Tidak ada aktivitas scan yang sesuai filter.</td>
+              </tr>
+              <tr v-for="l in filteredAccessLogs" :key="l.id">
+                <td class="font-monospace text-muted" style="font-size: 12.5px;">{{ fmtDateTime(l.scanned_at) }}</td>
+                <td>
+                  <span class="pt-dir-badge" :class="String(l.direction).toUpperCase() === 'IN' ? 'in' : 'out'">
+                    {{ String(l.direction).toUpperCase() === 'IN' ? 'MASUK (IN)' : 'KELUAR (OUT)' }}
+                  </span>
+                </td>
+                <td class="font-monospace fw-semibold text-dark">{{ l.ticket_code || l.credential_value }}</td>
+                <td>
+                  <span class="pt-status-badge" :class="l.is_allowed ? 'allowed' : 'denied'">
+                    {{ l.is_allowed ? 'Diizinkan' : 'Ditolak' }}
+                  </span>
+                </td>
+                <td class="text-muted" style="font-size: 12.5px;">{{ formatDenyReason(l.deny_reason, l.is_allowed) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </template>
 
     <!-- 4. GATES & HARDWARE DEVICES -->
     <div v-else-if="section === 'gates'" class="row g-3">
@@ -438,6 +505,34 @@ const feedback = ref(null)
 const orders = ref([])
 const accessLogs = ref([])
 const bookings = ref([])
+const logSearch = ref('')
+const logDirFilter = ref('ALL')
+const logStatusFilter = ref('ALL')
+
+const filteredAccessLogs = computed(() => {
+  return accessLogs.value.filter(l => {
+    const code = String(l.ticket_code || l.credential_value || '').toLowerCase()
+    if (logSearch.value && !code.includes(logSearch.value.toLowerCase())) return false
+    const dir = String(l.direction || '').toUpperCase()
+    if (logDirFilter.value !== 'ALL' && dir !== logDirFilter.value) return false
+    if (logStatusFilter.value === 'ALLOWED' && !l.is_allowed) return false
+    if (logStatusFilter.value === 'DENIED' && l.is_allowed) return false
+    return true
+  })
+})
+
+function formatDenyReason(reason, isAllowed) {
+  if (isAllowed) return 'Akses valid'
+  const map = {
+    TICKET_NOT_FOUND: 'Tiket tidak ditemukan',
+    OVERTIME: 'Melewati batas durasi bermain (Overtime)',
+    REENTRY_LIMIT_EXCEEDED: 'Melebihi batas kuota re-entry',
+    ALREADY_INSIDE: 'Pengunjung tercatat masih di dalam area',
+    NOT_INSIDE: 'Tiket belum tercatat masuk area',
+    EXPIRED: 'Masa berlaku tiket telah habis'
+  }
+  return map[reason] || reason || 'Akses ditolak'
+}
 const sysData = reactive({
   outlets: [],
   gates: [],
@@ -528,6 +623,19 @@ onMounted(loadAll)
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 14px 18px;
+}
+
+.pt-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.pt-stat-val {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .pt-btn-outline {
