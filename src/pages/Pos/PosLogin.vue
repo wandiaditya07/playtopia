@@ -1,24 +1,24 @@
 <template>
   <div class="playtopia-auth-page min-vh-100 d-flex align-items-center justify-content-center py-4 px-3">
-    <div class="auth-wrapper w-100" style="max-width: 920px;">
-      <div class="row g-0 shadow-lg rounded-4 overflow-hidden bg-white border border-info-subtle">
+    <div class="auth-wrapper w-100" style="max-width: 900px;">
+      <div class="row g-0 shadow-sm rounded-3 overflow-hidden bg-white border">
         <!-- Left Panel: Brand & Quick Role Selector -->
         <div class="col-lg-6 p-4 p-md-5 d-flex flex-column justify-content-between auth-left-panel">
           <div>
-            <div class="bg-white d-inline-block p-3 rounded-4 shadow-sm mb-4">
-              <img :src="PlaytopiaLogo" alt="Playtopia Indonesia" style="max-height: 48px;" />
+            <div class="bg-white d-inline-block px-3 py-2 rounded-3 mb-4">
+              <img :src="PlaytopiaLogo" alt="Playtopia Indonesia" style="max-height: 40px;" />
             </div>
-            <h3 class="fw-bold text-white mb-2">
-              Integrated POS &amp; Smart Gate System
-            </h3>
+            <h4 class="fw-bold text-white mb-2">
+              Playtopia POS &amp; Access System
+            </h4>
             <p class="text-white-50 small mb-4">
-              Sistem terpadu Kasir Touchscreen, Gelang/Kartu RFID, Tripod Turnstile Gate, dan Manajemen Multi-Role berdasarkan grup menu.
+              Sistem manajemen operasional Kasir POS, kartu RFID, Turnstile Gate, dan akses grup menu berbasis role.
             </p>
 
             <!-- Interactive Quick Login Role Cards -->
             <div class="mb-2">
-              <div class="text-white small fw-bold text-uppercase mb-2" style="letter-spacing: 0.8px;">
-                ⚡ Pilih Role Cepat (Klik untuk Isi Otomatis):
+              <div class="text-white-50 small fw-semibold text-uppercase mb-2" style="letter-spacing: 0.05em;">
+                Pilih Akun Demo (Klik untuk Isi Otomatis)
               </div>
 
               <div class="d-flex flex-column gap-2">
@@ -26,46 +26,42 @@
                   v-for="r in demoRoles"
                   :key="r.email"
                   type="button"
-                  class="role-pick-btn text-start p-3 rounded-3 border-0 d-flex align-items-center gap-3 w-100"
+                  class="role-pick-btn text-start p-3 rounded-2 border-0 d-flex align-items-center justify-content-between gap-3 w-100"
                   :class="{ selected: email === r.email }"
                   :disabled="auth.isLoggingIn"
                   @click="selectDemoRole(r)"
                 >
-                  <span class="role-pick-icon">{{ r.icon }}</span>
-                  <div class="flex-grow-1 lh-sm">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <strong class="text-dark">{{ r.title }}</strong>
-                      <span class="badge rounded-pill" :class="r.badgeClass">{{ r.role }}</span>
-                    </div>
+                  <div class="lh-sm">
+                    <div class="fw-semibold text-dark" style="font-size: 13.5px;">{{ r.title }}</div>
                     <div class="text-muted mt-1" style="font-size: 11.5px;">{{ r.desc }}</div>
                     <div class="font-monospace text-primary mt-1" style="font-size: 11px;">
                       {{ r.email }} / {{ r.password }}
                     </div>
                   </div>
+                  <span class="badge rounded-pill" :class="r.badgeClass">{{ r.role }}</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <div class="text-white-50 small mt-4 pt-2 border-top border-white border-opacity-25 d-flex justify-content-between">
+          <div class="text-white-50 small mt-4 pt-3 border-top border-white border-opacity-25 d-flex justify-content-between">
             <span>&copy; 2026 Playtopia Indonesia</span>
-            <span>JWT + MySQL RBAC</span>
+            <span>MySQL RBAC</span>
           </div>
         </div>
 
         <!-- Right Panel: Login Form -->
         <div class="col-lg-6 p-4 p-md-5 d-flex flex-column justify-content-center bg-white">
           <div class="mb-4">
-            <span class="badge badge-play-sky rounded-pill px-3 py-1 mb-2">🔐 Autentikasi Keamanan JWT</span>
-            <h4 class="fw-bold text-dark mb-1">Masuk ke Portal Playtopia</h4>
+            <h4 class="fw-bold text-dark mb-1">Masuk ke Sistem</h4>
             <p class="text-muted small mb-0">
-              Menu yang tampil akan otomatis menyesuaikan dengan Role &amp; Group Permission Anda.
+              Menu yang tampil akan otomatis menyesuaikan dengan Role &amp; Group Permission akun Anda.
             </p>
           </div>
 
           <div
             v-if="notice"
-            class="alert alert-sm mb-3 rounded-3"
+            class="alert alert-sm mb-3 rounded-2"
             :class="notice.type === 'warning' ? 'alert-warning' : 'alert-info'"
             role="alert"
           >
@@ -75,17 +71,17 @@
           <form novalidate @submit.prevent="submit">
             <div
               v-if="errorMessage"
-              class="alert alert-danger alert-sm mb-3 rounded-3"
+              class="alert alert-danger alert-sm mb-3 rounded-2"
               role="alert"
             >
-              ⚠️ {{ errorMessage }}
+              {{ errorMessage }}
             </div>
 
             <div class="mb-3">
-              <label class="form-label small fw-bold text-dark">Email Akun:</label>
+              <label class="form-label small fw-semibold text-dark">Email Akun</label>
               <input
                 v-model.trim="email"
-                class="form-control form-control-lg"
+                class="form-control"
                 type="email"
                 name="email"
                 placeholder="admin@playtopia.id"
@@ -96,11 +92,11 @@
             </div>
 
             <div class="mb-4">
-              <label class="form-label small fw-bold text-dark">Kata Sandi:</label>
+              <label class="form-label small fw-semibold text-dark">Kata Sandi</label>
               <div class="input-group">
                 <input
                   v-model="password"
-                  class="form-control form-control-lg"
+                  class="form-control"
                   :type="showPassword ? 'text' : 'password'"
                   name="password"
                   placeholder="••••••••"
@@ -110,18 +106,18 @@
                 >
                 <button
                   type="button"
-                  class="btn btn-outline-secondary px-3"
+                  class="btn btn-outline-secondary px-3 small"
                   :disabled="auth.isLoggingIn"
                   @click="showPassword = !showPassword"
                 >
-                  {{ showPassword ? '🙈' : '👁️' }}
+                  {{ showPassword ? 'Sembunyikan' : 'Tampilkan' }}
                 </button>
               </div>
             </div>
 
             <button
               type="submit"
-              class="btn btn-play-sky btn-lg w-100 py-3 fw-bold text-white"
+              class="btn btn-primary w-100 py-2.5 fw-semibold"
               :disabled="!canSubmit"
             >
               <span
@@ -130,13 +126,13 @@
                 role="status"
                 aria-hidden="true"
               />
-              {{ auth.isLoggingIn ? 'Memvalidasi Sesi & Role...' : '🚀 Masuk Sekarang' }}
+              {{ auth.isLoggingIn ? 'Memvalidasi Sesi...' : 'Masuk' }}
             </button>
           </form>
 
           <div class="mt-4 pt-3 border-top text-center">
-            <a href="/customer-display" target="_blank" class="btn btn-sm btn-outline-info rounded-pill px-3">
-              🖥️ Buka Layar Pelanggan (Customer Display)
+            <a href="/customer-display" target="_blank" class="btn btn-sm btn-outline-secondary px-3">
+              Buka Layar Pelanggan (Customer Display)
             </a>
           </div>
         </div>
@@ -164,29 +160,26 @@ const demoRoles = [
   {
     role: 'Admin',
     title: 'Administrator Sistem',
-    icon: '🛡️',
     email: 'admin@playtopia.id',
     password: 'admin123',
-    badgeClass: 'badge-play-pink',
-    desc: 'Akses penuh 8 Group Menu: Role Matrix, User, Menu, Katalog, Kasir & Gate'
+    badgeClass: 'badge-play-sky',
+    desc: 'Akses penuh 8 Grup Menu: Role Matrix, User, Menu, Katalog, Kasir & Gate'
   },
   {
-    role: 'Client (Owner)',
+    role: 'Client',
     title: 'Owner Playtopia',
-    icon: '👑',
     email: 'owner@playtopia.id',
     password: 'owner123',
     badgeClass: 'badge-play-amber',
-    desc: 'Dashboard Eksekutif, Laporan Penjualan, Approval Closing, Voucher & Promo'
+    desc: 'Dashboard Eksekutif, Laporan Penjualan, Approval Closing & Promo'
   },
   {
-    role: 'Staff (Kasir)',
+    role: 'Staff',
     title: 'Kasir Operasional',
-    icon: '🧑‍💻',
     email: 'kasir@playtopia.id',
     password: 'kasir123',
-    badgeClass: 'badge-play-sky',
-    desc: 'Kasir POS Touchscreen, Check-in Gate, Member Top-Up & Closing Shift'
+    badgeClass: 'badge-play-mint',
+    desc: 'Kasir POS, Monitoring Gate, Member Top-Up & Closing Shift'
   }
 ]
 
@@ -195,7 +188,7 @@ const canSubmit = computed(() => emailValid.value && password.value.length > 0 &
 
 const notice = computed(() => {
   if (route.query.reason === 'expired') {
-    return { type: 'warning', text: 'Sesi login Anda telah berakhir (expired). Silakan login kembali.' }
+    return { type: 'warning', text: 'Sesi login Anda telah berakhir. Silakan login kembali.' }
   }
   if (route.query.reason === 'unauthorized') {
     return { type: 'info', text: 'Silakan login terlebih dahulu untuk mengakses sistem.' }
@@ -232,40 +225,25 @@ async function submit() {
 
 <style scoped>
 .playtopia-auth-page {
-  background: radial-gradient(circle at top left, #e0f7ff 0%, #fce7f3 50%, #f0f9ff 100%);
+  background: #f8fafc;
 }
 
 .auth-left-panel {
-  background: linear-gradient(145deg, #0284c7 0%, #0369a1 55%, #db2777 100%);
+  background: linear-gradient(145deg, #0284c7 0%, #0369a1 100%);
 }
 
 .role-pick-btn {
-  background: rgba(255, 255, 255, 0.92);
-  transition: all 0.18s ease;
+  background: rgba(255, 255, 255, 0.95);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
 }
 
 .role-pick-btn:hover:not(:disabled) {
   background: #ffffff;
-  transform: translateX(4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .role-pick-btn.selected {
   background: #ffffff;
-  outline: 3px solid #fde047;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
-}
-
-.role-pick-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: #f0f9ff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  flex-shrink: 0;
+  outline: 2px solid #38bdf8;
 }
 </style>

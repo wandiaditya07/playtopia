@@ -1,11 +1,11 @@
 <template>
   <div class="catalog-manager-page">
     <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-4 shadow-sm border">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 bg-white p-3 rounded-3 shadow-sm border">
       <div>
-        <h4 class="mb-0 fw-bold text-dark">
-          📦 Katalog Produk, Paket Bermain &amp; Unit Bisnis
-        </h4>
+        <h5 class="mb-0 fw-bold text-dark">
+          Katalog Produk, Paket Bermain &amp; Unit Bisnis
+        </h5>
         <small class="text-muted">
           Kelola paket tiket Playground (durasi, grace period, re-entry, denda overtime) serta menu Cafe &amp; Snack.
         </small>
@@ -13,23 +13,23 @@
       <div class="d-flex flex-wrap gap-2">
         <button
           type="button"
-          class="btn btn-sm fw-bold"
-          :class="activeTab === 'products' ? 'btn-play-sky' : 'btn-outline-primary'"
+          class="btn btn-sm fw-semibold"
+          :class="activeTab === 'products' ? 'btn-primary' : 'btn-outline-primary'"
           @click="activeTab = 'products'"
         >
-          🎡 Produk &amp; Paket ({{ products.length }})
+          Produk &amp; Paket ({{ products.length }})
         </button>
         <button
           type="button"
-          class="btn btn-sm fw-bold"
-          :class="activeTab === 'units' ? 'btn-play-pink' : 'btn-outline-primary'"
+          class="btn btn-sm fw-semibold"
+          :class="activeTab === 'units' ? 'btn-primary' : 'btn-outline-primary'"
           @click="activeTab = 'units'"
         >
-          🏢 Unit Bisnis ({{ businessUnits.length }})
+          Unit Bisnis ({{ businessUnits.length }})
         </button>
         <button
           type="button"
-          class="btn btn-sm btn-play-mint fw-bold"
+          class="btn btn-sm btn-success fw-semibold"
           :disabled="!auth.can('catalog.products', 'create')"
           @click="openCreateModal"
         >

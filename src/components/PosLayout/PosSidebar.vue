@@ -1,9 +1,21 @@
 <template>
-  <aside class="pt-sidebar d-print-none" :class="{ collapsed }">
-    <!-- Brand Logo Header -->
+  <aside
+    class="pt-sidebar d-print-none"
+    :class="{ collapsed }"
+    @mouseenter="$emit('mouseenter-sidebar')"
+    @mouseleave="onMouseLeave"
+  >
+    <!-- Brand Logo Header (Full Playtopia when expanded, P+T when minimized) -->
     <div class="pt-sidebar-brand">
-      <router-link to="/app/dashboard" class="d-flex align-items-center text-decoration-none">
-        <img :src="PlaytopiaLogo" alt="Playtopia" class="pt-logo-img" />
+      <router-link
+        to="/app/dashboard"
+        class="pt-brand-link d-flex align-items-center justify-content-center text-decoration-none"
+      >
+        <div v-if="collapsed" class="pt-logo-mini" title="Playtopia">
+          <img :src="PlaytopiaP" alt="P" class="pt-char-p" />
+          <img :src="PlaytopiaT" alt="T" class="pt-char-t" />
+        </div>
+        <img v-else :src="PlaytopiaLogo" alt="Playtopia" class="pt-logo-img" />
       </router-link>
     </div>
 
@@ -25,11 +37,12 @@
     </div>
 
     <!-- Grouped Navigation Menus -->
-    <nav class="pt-sidebar-nav flex-grow-1 overflow-auto px-3 py-3">
+    <nav class="pt-sidebar-nav flex-grow-1 overflow-y-auto overflow-x-hidden px-2 py-3">
       <div
         v-for="group in displayGroups"
         :key="group.code"
-        class="pt-nav-group mb-3"
+        class="pt-nav-group"
+        :class="collapsed ? 'mb-1' : 'mb-3'"
       >
         <!-- Group Header -->
         <button
@@ -38,7 +51,7 @@
           class="pt-group-header w-100 d-flex align-items-center justify-content-between px-2 py-1 border-0 bg-transparent"
           @click="toggleGroup(group.code)"
         >
-          <span>{{ groupLabelId(group.code, group.label) }}</span>
+          <span class="text-truncate">{{ groupLabelId(group.code, group.label) }}</span>
           <svg
             class="pt-chevron"
             :class="{ rotated: !isGroupOpen(group.code) }"
@@ -63,10 +76,10 @@
           <li v-for="item in group.items" :key="item.code" class="mb-1">
             <router-link
               :to="item.path"
-              class="pt-nav-item d-flex align-items-center gap-2 px-2 py-2 rounded-2 text-decoration-none"
-              :class="{ active: isActiveRoute(item.path) }"
+              class="pt-nav-item d-flex align-items-center rounded-2 text-decoration-none"
+              :class="{ active: isActiveRoute(item.path), 'justify-content-center px-0': collapsed, 'gap-2 px-2': !collapsed }"
               :title="itemLabelId(item.code, item.label)"
-              @click="$emit('close-mobile')"
+              @click="onNavClick"
             >
               <span class="pt-item-icon" v-html="getMenuSvg(item.code)" />
               <span v-if="!collapsed" class="pt-item-label flex-grow-1 text-truncate">
@@ -95,15 +108,30 @@ import { reactive, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePosAuthStore } from '@/stores/posAuth'
 import PlaytopiaLogo from '@/assets/playtopia-logo.png'
+import PlaytopiaP from '@/assets/playtopia-p.png'
+import PlaytopiaT from '@/assets/playtopia-t.png'
 
 defineProps({
   collapsed: { type: Boolean, default: false }
 })
-defineEmits(['close-mobile'])
+const emit = defineEmits(['close-mobile', 'mouseenter-sidebar', 'mouseleave-sidebar'])
 
 const route = useRoute()
 const auth = usePosAuthStore()
 const closedGroups = reactive({})
+
+function onMouseLeave(e) {
+  // Blur any focused link inside sidebar so focus ring never sticks when minimized
+  if (e.currentTarget && e.currentTarget.contains(document.activeElement)) {
+    document.activeElement.blur()
+  }
+  emit('mouseleave-sidebar')
+}
+
+function onNavClick(e) {
+  if (e.currentTarget) e.currentTarget.blur()
+  emit('close-mobile')
+}
 
 const DEFAULT_GROUPS = [
   {
@@ -242,7 +270,8 @@ function getMenuSvg(code) {
   border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
-  transition: width 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease;
   z-index: 1040;
 }
 
@@ -252,16 +281,55 @@ function getMenuSvg(code) {
 
 .pt-sidebar-brand {
   height: 64px;
-  padding: 0 20px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
+  justify-content: center;
   border-bottom: 1px solid #f1f5f9;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pt-sidebar.collapsed .pt-sidebar-brand {
+  padding: 0 6px;
+}
+
+.pt-brand-link {
+  width: 100%;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .pt-logo-img {
   max-height: 36px;
+  max-width: 180px;
   width: auto;
   object-fit: contain;
+  display: block;
+}
+
+.pt-logo-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  height: 34px;
+  max-width: 54px;
+}
+
+.pt-char-p {
+  height: 30px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.pt-char-t {
+  height: 29px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  margin-left: -2px;
 }
 
 .pt-user-card {
@@ -290,6 +358,7 @@ function getMenuSvg(code) {
   color: #94a3b8;
   text-transform: uppercase;
   cursor: pointer;
+  outline: none !important;
 }
 
 .pt-group-header:hover {
@@ -299,6 +368,7 @@ function getMenuSvg(code) {
 .pt-chevron {
   color: #94a3b8;
   transition: transform 0.18s ease;
+  flex-shrink: 0;
 }
 
 .pt-chevron.rotated {
@@ -309,12 +379,28 @@ function getMenuSvg(code) {
   color: #475569;
   font-size: 13.5px;
   font-weight: 500;
+  min-height: 38px;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
   transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pt-sidebar.collapsed .pt-nav-item {
+  width: 42px;
+  height: 40px;
+  margin: 0 auto;
 }
 
 .pt-nav-item:hover {
   background-color: #f1f5f9;
   color: #0f172a;
+}
+
+.pt-nav-item:focus,
+.pt-nav-item:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .pt-nav-item.active {
@@ -352,6 +438,7 @@ function getMenuSvg(code) {
     top: 0;
     bottom: 0;
     left: 0;
+    width: 248px !important;
     transform: translateX(-100%);
     box-shadow: 8px 0 24px rgba(15, 23, 42, 0.08);
   }
