@@ -1,7 +1,9 @@
 <template>
   <div class="pos-cashier">
-    <!-- Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <!-- Layar Kasir Interaktif (disembunyikan saat mencetak struk) -->
+    <div class="pos-cashier-screen d-print-none">
+      <!-- Header -->
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
       <div class="d-flex align-items-center gap-2">
         <h1 class="page-title mb-0">
           Kasir POS
@@ -512,100 +514,156 @@
         </div>
       </div>
     </div>
+    </div> <!-- /pos-cashier-screen d-print-none -->
 
     <!-- Struk -->
     <div
       v-if="receipt"
-      class="pos-backdrop"
+      class="pos-backdrop pos-receipt-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="receipt-title"
     >
-      <div class="card pos-dialog pos-dialog-sm">
-        <div class="card-body font-monospace small">
-          <div class="text-center border-bottom pb-2 mb-2">
-            <strong
-              id="receipt-title"
-              class="fs-6"
-            >PLAYTOPIA PLAYGROUND &amp; CAFE</strong><br>
-            <span class="text-muted">Struk (pratinjau 80mm)</span>
-          </div>
-          <div>No: <strong>{{ receipt.invoice_number }}</strong></div>
-          <div>Waktu: {{ receiptTime }}</div>
-          <div>Kasir: {{ auth.user?.name }}</div>
-          <div class="mb-2">
-            Bayar: {{ methodLabel(receipt.payment_method) }}
+      <div class="card pos-dialog pos-dialog-sm receipt-dialog" id="receipt-print-area">
+        <div class="card-body font-monospace receipt-body">
+          <!-- Header Brand Struk -->
+          <div class="receipt-header text-center pb-1">
+            <h5 id="receipt-title" class="fw-bold mb-0 receipt-brand">
+              PLAYTOPIA
+            </h5>
+            <div class="fw-semibold text-uppercase receipt-sub-brand" style="font-size: 11px; letter-spacing: 1px;">
+              Playground &amp; Cafe
+            </div>
+            <div class="text-muted receipt-sub" style="font-size: 11px;">
+              Senayan Park · Lantai 2 · Jakarta Pusat
+            </div>
+            <div class="text-muted receipt-sub" style="font-size: 10px;">
+              Telp: (021) 5790-1234 &middot; IG: @playtopia.id
+            </div>
+            <div class="receipt-doc-title mt-1 fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 0.5px;">
+              STRUK PEMBELIAN &amp; TIKET AKSES
+            </div>
           </div>
 
-          <table class="w-100 border-top border-bottom mb-2">
-            <tbody>
-              <tr
-                v-for="(it, i) in receipt.items"
-                :key="i"
-              >
-                <td>{{ it.name }} x{{ it.qty }}</td>
-                <td class="text-end">
-                  {{ rupiah(it.price * it.qty) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="receipt-dashed-divider" />
 
-          <div class="d-flex justify-content-between">
-            <span>Subtotal</span><span>{{ rupiah(receipt.subtotal) }}</span>
-          </div>
-          <div
-            v-if="receipt.discount > 0"
-            class="d-flex justify-content-between"
-          >
-            <span>Diskon member</span><span>- {{ rupiah(receipt.discount) }}</span>
-          </div>
-          <div class="d-flex justify-content-between fw-bold">
-            <span>TOTAL</span><span>{{ rupiah(receipt.total_amount) }}</span>
-          </div>
-          <template v-if="receipt.cash_received !== null">
+          <!-- Metadata Struk -->
+          <div class="receipt-meta" style="font-size: 11.5px;">
             <div class="d-flex justify-content-between">
-              <span>Tunai</span><span>{{ rupiah(receipt.cash_received) }}</span>
+              <span class="text-muted">No. Transaksi</span>
+              <strong class="text-dark">{{ receipt.invoice_number }}</strong>
             </div>
             <div class="d-flex justify-content-between">
-              <span>Kembali</span><span>{{ rupiah(receipt.change_amount) }}</span>
+              <span class="text-muted">Waktu</span>
+              <span>{{ receiptTime }}</span>
             </div>
-          </template>
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Kasir</span>
+              <span>{{ auth.user?.name || 'Kasir Utama' }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Metode Bayar</span>
+              <strong class="text-dark">{{ methodLabel(receipt.payment_method) }}</strong>
+            </div>
+          </div>
 
+          <div class="receipt-dashed-divider" />
+
+          <!-- Daftar Item Pembelian -->
+          <div class="receipt-items-list mb-1" style="font-size: 11.5px;">
+            <div
+              v-for="(it, i) in receipt.items"
+              :key="i"
+              class="receipt-item-row py-1"
+            >
+              <div class="d-flex justify-content-between align-items-baseline">
+                <span class="fw-semibold text-dark">{{ it.name }}</span>
+                <span class="fw-bold">{{ rupiah(it.price * it.qty) }}</span>
+              </div>
+              <div class="text-muted" style="font-size: 11px;">
+                {{ it.qty }}x @ {{ rupiah(it.price) }}
+              </div>
+            </div>
+          </div>
+
+          <div class="receipt-dashed-divider" />
+
+          <!-- Kalkulasi Pembayaran -->
+          <div class="receipt-calc" style="font-size: 12px;">
+            <div class="d-flex justify-content-between py-1">
+              <span>Subtotal</span>
+              <span>{{ rupiah(receipt.subtotal) }}</span>
+            </div>
+            <div
+              v-if="receipt.discount > 0"
+              class="d-flex justify-content-between py-1 text-success"
+            >
+              <span>Diskon Member</span>
+              <span>- {{ rupiah(receipt.discount) }}</span>
+            </div>
+            <div class="receipt-dashed-divider my-1" />
+            <div class="d-flex justify-content-between py-1 fw-bold fs-6 text-dark">
+              <span>TOTAL</span>
+              <span>{{ rupiah(receipt.total_amount) }}</span>
+            </div>
+            <template v-if="receipt.cash_received !== null">
+              <div class="d-flex justify-content-between py-1">
+                <span class="text-muted">Tunai Diterima</span>
+                <span>{{ rupiah(receipt.cash_received) }}</span>
+              </div>
+              <div class="d-flex justify-content-between py-1 fw-bold">
+                <span class="text-muted">Kembalian</span>
+                <span>{{ rupiah(receipt.change_amount) }}</span>
+              </div>
+            </template>
+          </div>
+
+          <!-- Bagian Tiket Masuk (QR Code) - BERSIH TANPA EMOJI -->
           <div
-            v-if="receipt.tickets.length"
-            class="border-top mt-3 pt-3 text-center"
+            v-if="receipt.tickets && receipt.tickets.length"
+            class="receipt-tickets-section mt-2 text-center"
           >
-            <div class="badge badge-play-sky mb-2">
-              🎟️ TIKET MASUK (QR)
+            <div class="receipt-dashed-divider" />
+            <div class="receipt-ticket-title-badge my-1">
+              TIKET MASUK PLAYGROUND
             </div>
             <div
               v-for="t in receipt.tickets"
               :key="t.ticket_code"
-              class="border rounded p-2 mb-2"
+              class="receipt-ticket-card p-2 my-2 text-center"
             >
-              <strong class="d-block">{{ t.visitor_name }}</strong>
-              <span class="text-muted">{{ t.package_name }}</span>
-              <div class="my-2">
+              <div class="receipt-ticket-visitor fw-bold text-dark fs-6">{{ t.visitor_name }}</div>
+              <div class="receipt-ticket-pkg text-muted small">{{ t.package_name }}</div>
+              <div class="my-2 d-flex justify-content-center">
                 <QrImage
                   :value="t.qr_token"
-                  :size="110"
+                  :size="125"
                 />
               </div>
-              <div class="fw-bold">
+              <div class="fw-bold font-monospace receipt-ticket-code">
                 {{ t.ticket_code }}
               </div>
-              <div class="text-muted">
+              <div class="text-muted small mt-1" style="font-size: 11px;">
                 Toleransi {{ t.grace_period_minutes }} mnt &middot; Re-entry maks {{ t.max_reentry }}x
+              </div>
+              <div class="text-muted mt-1 fst-italic" style="font-size: 10px;">
+                Pindai QR ini pada mesin turnstile / gate masuk
               </div>
             </div>
           </div>
 
-          <div class="text-center text-muted mt-3">
-            Terima kasih &amp; selamat bermain!
+          <div class="receipt-dashed-divider" />
+
+          <!-- Footer Struk -->
+          <div class="text-center text-muted receipt-footer mt-2" style="font-size: 11px;">
+            <div class="fw-semibold text-dark">Terima kasih atas kunjungan Anda!</div>
+            <div>Simpan struk ini sebagai tiket &amp; bukti pembayaran yang sah.</div>
+            <div class="receipt-footer-hash mt-1 text-uppercase" style="font-size: 9.5px; letter-spacing: 0.5px;">
+              *** PLAYTOPIA POS SYSTEM · LISENSI RESMI ***
+            </div>
           </div>
         </div>
-        <div class="card-footer text-end d-flex justify-content-end gap-2 d-print-none">
+        <div class="card-footer text-end d-flex justify-content-end gap-2 d-print-none bg-white border-top">
           <button
             type="button"
             class="btn btn-outline-secondary d-flex align-items-center gap-1"
@@ -1000,28 +1058,61 @@ onUnmounted(() => {
   border-radius: 16px;
 }
 
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  .pos-backdrop,
-  .pos-dialog,
-  .pos-dialog * {
-    visibility: visible;
-  }
-  .pos-backdrop {
-    position: absolute;
-    inset: 0;
-    background: transparent !important;
-    padding: 0 !important;
-  }
-  .pos-dialog {
-    max-width: 100% !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-  .d-print-none {
-    display: none !important;
-  }
+/* Struk Modal & Card Styling */
+.receipt-dialog {
+  max-width: 400px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 40px rgba(0, 44, 62, 0.25);
+  border: 1px solid #d0e8f2;
+}
+
+.receipt-body {
+  padding: 1.25rem 1.25rem 1rem 1.25rem;
+  color: #1a202c;
+  line-height: 1.35;
+}
+
+.receipt-brand {
+  color: #00729c;
+  letter-spacing: 1.5px;
+}
+
+.receipt-sub-brand {
+  color: #004a66;
+}
+
+.receipt-dashed-divider {
+  border-top: 1px dashed #cbd5e1;
+  margin: 8px 0;
+}
+
+.receipt-ticket-title-badge {
+  display: inline-block;
+  background-color: #00729c;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.receipt-ticket-card {
+  border: 1.5px dashed #00729c;
+  border-radius: 8px;
+  background-color: #f7fcfe;
+  transition: background-color 0.15s ease;
+}
+
+.receipt-ticket-code {
+  font-size: 13px;
+  letter-spacing: 1.2px;
+  color: #002c3e;
+}
+
+.receipt-footer-hash {
+  color: #94a3b8;
 }
 </style>

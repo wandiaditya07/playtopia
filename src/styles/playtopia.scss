@@ -34,6 +34,149 @@ aside.rounded {
   line-height: inherit;
 }
 
+/* ========================================================
+   GLOBAL PRINT STYLES (Clean Thermal & Document Printing)
+   Mencegah background web, sidebar, header & layout ikut tercetak
+   ======================================================== */
+@media print {
+  @page {
+    margin: 3mm auto;
+    size: auto;
+  }
+
+  /* Reset kanvas cetak: putih bersih tanpa background web */
+  html, body, #app-root {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  /* Sembunyikan SEMUA elemen layout luar, sidebar, header, dan layar kasir */
+  .d-print-none,
+  .pos-cashier-screen,
+  .pt-app-shell .pt-sidebar,
+  .pt-app-shell .pt-header,
+  .pt-app-shell .pt-footer,
+  .card-footer,
+  button,
+  .btn {
+    display: none !important;
+  }
+
+  /* Netralkan shell layout agar tinggi runtuh (0px) dan tidak menambah halaman kosong */
+  .pt-app-shell,
+  .pt-main-pane,
+  .pt-content-area,
+  .pos-cashier {
+    background: transparent !important;
+    min-height: 0 !important;
+    height: auto !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Pos Backdrop struk: hapus overlay gelap fixed, ubah jadi container statis di atas */
+  .pos-receipt-backdrop {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 78mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+  }
+
+  /* Container Struk Thermal (ukuran standar printer kasir 80mm) */
+  .receipt-dialog {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 78mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .receipt-dialog .receipt-body {
+    padding: 2mm 1mm !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    background: #ffffff !important;
+  }
+
+  .receipt-brand {
+    color: #000000 !important;
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+  }
+
+  .receipt-sub-brand,
+  .receipt-sub,
+  .receipt-doc-title {
+    color: #000000 !important;
+  }
+
+  .receipt-dashed-divider {
+    border-top: 1px dashed #000000 !important;
+    margin: 4px 0 !important;
+  }
+
+  .receipt-ticket-title-badge {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #000000 !important;
+    border-radius: 0 !important;
+    font-weight: 700 !important;
+    padding: 2px 6px !important;
+  }
+
+  .receipt-ticket-card {
+    border: 1px dashed #000000 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    padding: 4px 2px !important;
+    margin: 5px 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .receipt-ticket-code {
+    color: #000000 !important;
+    font-weight: 800 !important;
+  }
+
+  .receipt-footer-hash {
+    color: #333333 !important;
+  }
+}
+
 /* Kartu & Container Playtopia — Clean Professional */
 .card, .widget {
   background: #ffffff !important;
