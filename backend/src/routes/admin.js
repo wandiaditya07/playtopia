@@ -5,7 +5,7 @@ import { requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Helper catat ke audit_logs
+// Audit logger
 async function logAudit(req, action, entityType, entityId, newData = null) {
   try {
     await pool.query(
@@ -26,7 +26,7 @@ async function logAudit(req, action, entityType, entityId, newData = null) {
   }
 }
 
-// 1. GET /api/v1/admin/dashboard -> Statistik real-time untuk halaman Dashboard
+// Dashboard
 router.get('/dashboard', async (req, res) => {
   try {
     const [[orderStats]] = await pool.query(`
@@ -106,7 +106,7 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// 2. GET /api/v1/admin/roles-matrix -> Roles, Menus (Grouped), Role Menu Permissions, dan Users (3-in-1 RBAC)
+// Roles matrix
 router.get('/roles-matrix', async (req, res) => {
   try {
     const [roles] = await pool.query('SELECT * FROM roles ORDER BY id ASC');
@@ -130,7 +130,7 @@ router.get('/roles-matrix', async (req, res) => {
   }
 });
 
-// POST /api/v1/admin/roles -> Buat Role Baru secara dinamis (+ opsional salin hak akses dari role lain)
+// Create role
 router.post('/roles', requireRole('Admin'), async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -195,7 +195,7 @@ router.post('/roles', requireRole('Admin'), async (req, res) => {
   }
 });
 
-// PUT /api/v1/admin/roles/:id -> Ubah Nama & Deskripsi Role
+// Update role
 router.put('/roles/:id', requireRole('Admin'), async (req, res) => {
   try {
     const roleId = Number(req.params.id);
@@ -231,7 +231,7 @@ router.put('/roles/:id', requireRole('Admin'), async (req, res) => {
   }
 });
 
-// DELETE /api/v1/admin/roles/:id -> Hapus Role Custom (dan pindahkan user ke role pengganti bila ada)
+// Delete role
 router.delete('/roles/:id', requireRole('Admin'), async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -262,7 +262,7 @@ router.delete('/roles/:id', requireRole('Admin'), async (req, res) => {
   }
 });
 
-// PUT /api/v1/admin/roles/:id/assign-user -> Masukkan / Pindahkan User ke Role Ini secara instan
+// Assign user to role
 router.put('/roles/:id/assign-user', requireRole('Admin'), async (req, res) => {
   try {
     const roleId = Number(req.params.id);
@@ -294,7 +294,7 @@ router.put('/roles/:id/assign-user', requireRole('Admin'), async (req, res) => {
   }
 });
 
-// PUT /api/v1/admin/roles-matrix -> Simpan perubahan matrix hak akses per role
+// Matrix permissions
 router.put('/roles-matrix', requireRole('Admin'), async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -336,7 +336,7 @@ router.put('/roles-matrix', requireRole('Admin'), async (req, res) => {
   }
 });
 
-// 3. USERS CRUD (/api/v1/admin/users)
+// Users
 router.get('/users', async (req, res) => {
   try {
     const [users] = await pool.query(`
@@ -420,7 +420,7 @@ router.put('/users/:id', requireRole('Admin'), async (req, res) => {
   }
 });
 
-// 4. MENUS CRUD (/api/v1/admin/menus)
+// Menus
 router.get('/menus', async (req, res) => {
   try {
     const [menus] = await pool.query('SELECT * FROM menus ORDER BY sort_order ASC, id ASC');
@@ -451,7 +451,7 @@ router.put('/menus/:id', requireRole('Admin'), async (req, res) => {
   }
 });
 
-// 5. PRODUCTS & BUSINESS UNITS CRUD (/api/v1/admin/catalog)
+// Catalog
 router.get('/catalog', async (req, res) => {
   try {
     const [products] = await pool.query(`
@@ -520,7 +520,7 @@ router.put('/products/:id', requireRole('Admin', 'Client'), async (req, res) => 
   }
 });
 
-// 6. MEMBERS, CARDS, PLANS & VOUCHERS (/api/v1/admin/members-promo)
+// Members & Promo
 router.get('/members-promo', async (req, res) => {
   try {
     const [members] = await pool.query(`
@@ -765,7 +765,7 @@ router.post('/vouchers', requireRole('Admin', 'Client'), async (req, res) => {
   }
 });
 
-// 7. BOOKINGS & REGISTRATIONS (/api/v1/admin/bookings)
+// Bookings
 router.get('/bookings', async (req, res) => {
   try {
     const [bookings] = await pool.query(`
@@ -806,7 +806,7 @@ router.post('/bookings', async (req, res) => {
   }
 });
 
-// 8. SYSTEM DATA (Outlets, Gates, Settings, Audit Logs, Item Sales Report)
+// System data
 router.get('/system-data', async (req, res) => {
   try {
     const [outlets] = await pool.query('SELECT * FROM outlets ORDER BY id ASC');

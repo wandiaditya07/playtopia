@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { pool, sha256 } from '../db_mysql.js';
 
-// Wajib diset lewat env di produksi. Fallback hanya untuk development lokal.
+// JWT Config
 export const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-playtopia-secret-change-me';
 export const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '8h';
 
@@ -24,7 +24,7 @@ function unauthorized(res, code, message) {
   return res.status(401).json({ success: false, code, message });
 }
 
-// Verifikasi header "Authorization: Bearer <jwt>". Mengisi req.user.
+// Token parser
 function readUserFromHeader(req, res) {
   const header = req.headers.authorization || '';
   const [scheme, token] = header.split(' ');
@@ -71,7 +71,7 @@ export function requireRole(...roles) {
   };
 }
 
-// Untuk endpoint turnstile: boleh JWT user (simulator/kasir) ATAU API key gate (hardware).
+// Gate or user auth
 export async function requireGateOrUser(req, res, next) {
   const gateKey = req.headers['x-gate-key'];
   if (gateKey) {

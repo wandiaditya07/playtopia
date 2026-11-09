@@ -83,7 +83,7 @@ function initSqliteFallback() {
   fs.mkdirSync(path.dirname(SQLITE_PATH), { recursive: true });
   sqliteDb = new DatabaseSync(SQLITE_PATH);
 
-  // Register custom SQL functions so MySQL queries work identically in SQLite
+  // Custom SQL functions
   sqliteDb.function('NOW', () => new Date().toISOString().slice(0, 19).replace('T', ' '));
   sqliteDb.function('CURDATE', () => new Date().toISOString().slice(0, 10));
   sqliteDb.function('IF', (cond, a, b) => (cond ? a : b));
@@ -380,7 +380,7 @@ function initSqliteFallback() {
     );
   `);
 
-  // Seed Roles, Business Units, Menus, Role Menu Permissions, Settings in SQLite
+  // SQLite seed
   const roleCount = sqliteDb.prepare('SELECT count(*) as c FROM roles').get().c;
   if (roleCount === 0) {
     sqliteDb.exec(`
@@ -418,11 +418,11 @@ function initSqliteFallback() {
       const code = m[2];
       // Role 2: Admin -> Full access to all 33 menus
       insPerm.run(2, menuId, 1, 1, 1, 1);
-      // Role 1: Client (Owner) -> All except low-level role matrix mutation
+      // Role 1 permissions
       const clientRead = 1;
       const clientWrite = ['roles', 'menus'].includes(code) ? 0 : 1;
       insPerm.run(1, menuId, clientWrite, clientRead, clientWrite, 0);
-      // Role 3: Staff (Kasir) -> POS, Access Control, Members, Booking
+      // Role 3 permissions
       const staffMenus = [
         'grp_pos', 'pos_cashier', 'orders', 'payments', 'shifts',
         'grp_access', 'access_scan', 'tickets', 'access_logs',
@@ -448,7 +448,7 @@ function initSqliteFallback() {
   return sqliteDb;
 }
 
-// Translate MySQL SQL queries into SQLite-compatible SQL
+// SQL dialect translator
 function translateSqlForSqlite(sql, params = []) {
   let q = sql.trim();
   const outParams = [];

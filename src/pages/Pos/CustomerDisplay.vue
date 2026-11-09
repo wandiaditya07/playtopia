@@ -339,7 +339,7 @@ import { rupiah } from '@/utils/format'
 import QrImage from '@/components/PosLayout/QrImage.vue'
 import PlaytopiaLogo from '@/assets/playtopia-logo.png'
 
-// ── State Mesin Display ──────────────────────────────────────────
+// State
 const state = ref('IDLE') // IDLE | CART | SUCCESS
 const items = ref([])
 const customerName = ref('')
@@ -353,17 +353,17 @@ const paymentMethod = ref(null)
 const qrisData = ref(null)
 const cashierName = ref('')
 
-// SUCCESS state data
+// Payment result
 const successCashGiven = ref(null)
 const successCashChange = ref(null)
 
-// Clock & Timers
+// Timers
 const currentTime = ref('')
 let clock = null
 let idleTimer = null
 let channel = null
 
-// ── Computed Properties ──────────────────────────────────────────
+// Computed
 const isQrisActive = computed(
   () => paymentMethod.value === 'QRIS' && !!qrisData.value
 )
@@ -372,7 +372,7 @@ const totalItemCount = computed(() => {
   return items.value.reduce((acc, curr) => acc + (Number(curr.qty) || 1), 0)
 })
 
-// ── Idle Promo Packages ──────────────────────────────────────────
+// Catalog
 const promoPackages = [
   { category: 'Playground', name: 'Paket Bermain 1 Jam', price: 50000, desc: '60 Menit' },
   { category: 'Playground', name: 'Paket Bermain 2 Jam', price: 90000, desc: '120 Menit' },
@@ -382,7 +382,7 @@ const promoPackages = [
   { category: 'Cafe', name: 'Kentang Goreng Renyah', price: 25000, desc: 'French Fries' },
 ]
 
-// ── Helpers ──────────────────────────────────────────────────────
+// Helpers
 function formatNum(value) {
   const n = Number(value)
   return Number.isFinite(n)
@@ -440,7 +440,6 @@ function handleMessage({ data }) {
     cashierName.value = data.cashier_name || cashierName.value
 
     clearTimeout(idleTimer)
-    // Beri jeda 8 detik agar pelanggan dapat melihat uang kembalian, lalu kembali ke Idle
     idleTimer = setTimeout(goIdle, 8000)
   } else if (data.type === 'RESET_IDLE') {
     goIdle()
@@ -456,7 +455,7 @@ onMounted(() => {
     channel.onmessage = handleMessage
   }
 
-  // Fallback: dengarkan event Storage bila BroadcastChannel terhambat
+  // Storage fallback
   window.addEventListener('storage', (e) => {
     if (e.key === 'playtopia_pos_display_sync' && e.newValue) {
       try {
@@ -483,9 +482,7 @@ onUnmounted(() => {
   padding: 0;
 }
 
-/* ═════════════════════════════════════════════════════════
-   ROOT STYLING — Deep Obsidian Slate (#0b0f19)
-═════════════════════════════════════════════════════════ */
+/* Root */
 .cfd {
   height: 100vh;
   width: 100vw;
@@ -503,9 +500,7 @@ onUnmounted(() => {
   letter-spacing: -0.01em;
 }
 
-/* ═════════════════════════════════════════════════════════
-   TOP BAR — Clean Brand Header
-═════════════════════════════════════════════════════════ */
+/* Header */
 .cfd-topbar {
   display: flex;
   align-items: center;
@@ -594,9 +589,7 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
 }
 
-/* ═════════════════════════════════════════════════════════
-   COMMON STATE CONTAINER & PANELS
-═════════════════════════════════════════════════════════ */
+/* Panels */
 .state-container {
   flex: 1;
   padding: 20px 24px;
@@ -634,9 +627,7 @@ onUnmounted(() => {
   border-radius: 6px;
 }
 
-/* ═════════════════════════════════════════════════════════
-   STATE 0: IDLE
-═════════════════════════════════════════════════════════ */
+/* State: Idle */
 .state-idle {
   grid-template-columns: 1fr 1.1fr;
 }
@@ -776,9 +767,7 @@ onUnmounted(() => {
   gap: 6px;
 }
 
-/* ═════════════════════════════════════════════════════════
-   STATE 1: CART (TRANSAKSI BERJALAN)
-═════════════════════════════════════════════════════════ */
+/* State: Cart */
 .state-cart {
   grid-template-columns: 1fr 340px;
 }
@@ -994,9 +983,7 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-/* ═════════════════════════════════════════════════════════
-   STATE 2: PEMBAYARAN QRIS
-═════════════════════════════════════════════════════════ */
+/* State: QRIS */
 .state-qris {
   grid-template-columns: 380px 1fr;
 }
@@ -1105,9 +1092,7 @@ onUnmounted(() => {
   animation: pulse-dot 1.2s infinite ease-in-out;
 }
 
-/* ═════════════════════════════════════════════════════════
-   STATE 3: PEMBAYARAN BERHASIL (SUCCESS)
-═════════════════════════════════════════════════════════ */
+/* State: Success */
 .state-success {
   grid-template-columns: 1fr 1fr;
 }

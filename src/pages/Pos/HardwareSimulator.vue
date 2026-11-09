@@ -55,7 +55,7 @@
 
     <!-- Main 2-Column Grid -->
     <div class="row g-3">
-      <!-- Left Column: Gate Terminal & Scan Controls -->
+      <!-- Gate terminal -->
       <div class="col-lg-6">
         <div class="pt-panel h-100 d-flex flex-column">
           <div class="pt-panel-header d-flex justify-content-between align-items-center">
@@ -217,7 +217,7 @@
               </button>
             </div>
 
-            <!-- Quick Scenario Actions (Minimal Footer) -->
+            <!-- Scenario presets -->
             <div class="pt-scenario-bar mt-auto d-flex flex-wrap align-items-center justify-content-between gap-2">
               <span class="text-muted fw-medium" style="font-size: 12px;">Skenario Uji Cepat</span>
               <div class="d-flex flex-wrap gap-2">
@@ -250,7 +250,7 @@
         </div>
       </div>
 
-      <!-- Right Column: Access Logs & Notification Log -->
+      <!-- Access logs -->
       <div class="col-lg-6 d-flex flex-column gap-3">
         <!-- Access Logs Card -->
         <div class="pt-panel">

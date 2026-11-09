@@ -88,9 +88,7 @@
       <button type="button" class="btn-close btn-sm" @click="feedback = null" />
     </div>
 
-    <!-- ======================================================== -->
-    <!-- TAB 1: DATA MEMBER (CRM & DIREKTORI PELANGGAN)           -->
-    <!-- ======================================================== -->
+    <!-- Tab: Members -->
     <div v-if="activeTab === 'members'">
       <!-- KPI Metric Summary -->
       <div class="row g-3 mb-3">
@@ -209,9 +207,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- TAB 2: KARTU RFID & WALLET TOP-UP (TERMINAL + HARDWARE)  -->
-    <!-- ======================================================== -->
+    <!-- Tab: Cards -->
     <div v-else-if="activeTab === 'cards'">
       <!-- Hardware Terminal Simulator Section -->
       <div class="row g-3 mb-4">
@@ -493,9 +489,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- TAB 3: PAKET MEMBERSHIP (CRUD PAKET SUBSCRIPTION)       -->
-    <!-- ======================================================== -->
+    <!-- Tab: Plans -->
     <div v-else-if="activeTab === 'plans'">
       <div class="row g-3">
         <div v-if="plans.length === 0" class="col-12">
@@ -575,9 +569,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- TAB 4: VOUCHERS & PROMO DISKON                          -->
-    <!-- ======================================================== -->
+    <!-- Tab: Vouchers -->
     <div v-else class="pt-panel">
       <div class="pt-panel-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold text-dark">Daftar Voucher &amp; Promo Diskon</span>
@@ -618,9 +610,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- MODAL: REGISTRASI MEMBER                                 -->
-    <!-- ======================================================== -->
+    <!-- Modal: Member -->
     <div v-if="showMemberModal" class="pt-modal-backdrop">
       <div class="pt-panel" style="max-width: 480px; width: 100%;">
         <div class="pt-panel-header d-flex justify-content-between align-items-center">
@@ -676,9 +666,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- MODAL: HUBUNGKAN KARTU RFID KE MEMBER                    -->
-    <!-- ======================================================== -->
+    <!-- Modal: Link RFID Card -->
     <div v-if="showCardModal" class="pt-modal-backdrop">
       <div class="pt-panel" style="max-width: 460px; width: 100%;">
         <div class="pt-panel-header d-flex justify-content-between align-items-center">
@@ -722,9 +710,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- MODAL: TAMBAH / EDIT PAKET MEMBERSHIP                    -->
-    <!-- ======================================================== -->
+    <!-- Modal: Membership Plan -->
     <div v-if="showPlanModal" class="pt-modal-backdrop">
       <div class="pt-panel" style="max-width: 480px; width: 100%;">
         <div class="pt-panel-header d-flex justify-content-between align-items-center">
@@ -803,9 +789,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- MODAL: TOP-UP SALDO MEMBER (UNIVERSAL)                   -->
-    <!-- ======================================================== -->
+    <!-- Modal: Top-Up -->
     <div v-if="topupTarget" class="pt-modal-backdrop">
       <div class="pt-panel" style="max-width: 440px; width: 100%;">
         <div class="pt-panel-header d-flex justify-content-between align-items-center">
@@ -842,9 +826,7 @@
       </div>
     </div>
 
-    <!-- ======================================================== -->
-    <!-- MODAL: BUAT VOUCHER                                      -->
-    <!-- ======================================================== -->
+    <!-- Modal: Voucher -->
     <div v-if="showVoucherModal" class="pt-modal-backdrop">
       <div class="pt-panel" style="max-width: 460px; width: 100%;">
         <div class="pt-panel-header d-flex justify-content-between align-items-center">

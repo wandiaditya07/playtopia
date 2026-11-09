@@ -5,7 +5,7 @@
     @mouseenter="$emit('mouseenter-sidebar')"
     @mouseleave="onMouseLeave"
   >
-    <!-- Brand Logo Header (Full Playtopia when expanded, P+T when minimized) -->
+    <!-- Brand Logo -->
     <div class="pt-sidebar-brand">
       <router-link
         to="/app/dashboard"
@@ -121,7 +121,6 @@ const auth = usePosAuthStore()
 const closedGroups = reactive({})
 
 function onMouseLeave(e) {
-  // Blur any focused link inside sidebar so focus ring never sticks when minimized
   if (e.currentTarget && e.currentTarget.contains(document.activeElement)) {
     document.activeElement.blur()
   }
@@ -225,7 +224,7 @@ function itemLabelId(code, fallback) {
   return map[code] || fallback
 }
 
-// Clean monochrome stroke SVG icons (16x16)
+// Icons
 const ICONS = {
   dashboard: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>',
   pos_cashier: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',

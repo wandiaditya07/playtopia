@@ -28,10 +28,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Gate: auth ditangani di dalam router (JWT user ATAU x-gate-key hardware)
+// Gate
 app.use('/api/v1/gate', gateRouter);
 
-// Terproteksi JWT
+// Protected routes
 app.use('/api/v1/products', requireAuth, productsRouter);
 app.use('/api/v1/transactions', requireAuth, transactionsRouter);
 app.use('/api/v1/members', requireAuth, membersRouter);
@@ -39,7 +39,7 @@ app.use('/api/v1/shifts', requireAuth, shiftsRouter);
 app.use('/api/v1/simulator', requireAuth, simulatorRouter);
 app.use('/api/v1/admin', requireAuth, adminRouter);
 
-// Route tidak dikenal -> JSON, bukan HTML
+// 404 Handler
 app.use('/api', (req, res) => {
   res.status(404).json({ success: false, message: `Endpoint ${req.method} ${req.originalUrl} tidak ditemukan` });
 });

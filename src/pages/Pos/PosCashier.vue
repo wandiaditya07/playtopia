@@ -648,7 +648,7 @@ const paymentMethods = [
   { value: 'MEMBER_BALANCE', label: 'Saldo Member' }
 ]
 
-// ---- data ----
+// State
 const products = ref([])
 const productsLoading = ref(true)
 const shift = ref(null)
@@ -676,7 +676,7 @@ const receipt = ref(null)
 let channel = null
 let visitorsTimer = null
 
-// ---- derived ----
+// Computed
 const tabs = computed(() => [
   { value: 'ALL', label: 'Semua', count: products.value.length },
   { value: 'PLAYGROUND', label: 'Tiket Playground', count: products.value.filter(p => p.category === 'PLAYGROUND').length },
@@ -742,7 +742,7 @@ const canPay = computed(() => {
 const receiptTime = computed(() => fmtDateTime(new Date()))
 const methodLabel = (v) => paymentMethods.find(m => m.value === v)?.label || v
 
-// ---- loaders ----
+// Data loaders
 async function loadAll() {
   loadError.value = ''
   productsLoading.value = true
@@ -764,11 +764,11 @@ async function loadVisitors() {
     const res = await api('/gate/active-tickets')
     activeVisitors.value = res.data.length
   } catch {
-    // indikator saja; kegagalan tidak perlu mengganggu kasir
+    
   }
 }
 
-// ---- cart ----
+// Cart
 function addToCart(product) {
   if (!canEditCart.value) return
   const existing = cart.value.find(i => i.product_id === product.id)
@@ -800,7 +800,7 @@ function clearCart() {
   clearMember()
 }
 
-// ---- member ----
+// Member
 async function lookupMember() {
   if (!memberQuery.value || lookupBusy.value) return
   lookupBusy.value = true
@@ -821,7 +821,7 @@ function clearMember() {
   lookupError.value = ''
 }
 
-// ---- payment ----
+// Payment
 function openPayment() {
   if (!canCheckout.value) return
   paymentMethod.value = 'CASH'
@@ -876,7 +876,7 @@ async function submitTransaction() {
     cart.value = []
     clearMember()
     loadVisitors()
-    // saldo / data produk bisa berubah -> sinkronkan shift
+    // Sync shift
     api('/shifts/current').then(s => { shift.value = s.data }).catch(() => {})
   } catch (err) {
     submitError.value = err.message
@@ -885,7 +885,7 @@ async function submitTransaction() {
   }
 }
 
-// ---- layar pelanggan (dual screen) ----
+// Customer display
 function broadcastCart() {
   channel?.postMessage({
     type: 'UPDATE_CART',

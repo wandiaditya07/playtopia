@@ -74,9 +74,9 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
 
     const now = new Date();
 
-    // === DIRECTION: IN (MASUK PLAYGROUND) ===
+    // Direction: IN
     if (direction.toLowerCase() === 'in') {
-      // 1. Scan Masuk Pertama Kali
+      // First-time entry
       if (ticket.status === 'unused' || !ticket.first_in_at) {
         let endsAtSql = 'DATE_ADD(NOW(), INTERVAL (play_minutes + tolerance_minutes) MINUTE)';
         if (ticket.is_open_play || !ticket.play_minutes) {
@@ -110,7 +110,7 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
         });
       }
 
-      // 2. Re-entry (Keluar-Masuk)
+      // Re-entry
       if (ticket.ends_at && now.getTime() > new Date(ticket.ends_at).getTime()) {
         await conn.query(`
           INSERT INTO access_logs (gate_id, outlet_id, ticket_id, scanned_code, direction, result, deny_reason, passed, scanned_at)
@@ -125,7 +125,7 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
         });
       }
 
-      // Cek Batas Re-entry (Maks 2x)
+      // Quota check
       if (ticket.reentries_used >= ticket.max_reentry) {
         await conn.query(`
           INSERT INTO access_logs (gate_id, outlet_id, ticket_id, scanned_code, direction, result, deny_reason, passed, scanned_at)
@@ -140,7 +140,7 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
         });
       }
 
-      // Increment reentries_used
+      // Update count
       const nextCount = ticket.reentries_used + 1;
       await conn.query('UPDATE tickets SET reentries_used = ?, updated_at = NOW() WHERE id = ?', [nextCount, ticket.id]);
 
@@ -165,7 +165,7 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
       });
     }
 
-    // === DIRECTION: OUT (KELUAR PLAYGROUND) ===
+    // Direction: OUT
     if (direction.toLowerCase() === 'out') {
       if (ticket.status === 'unused') {
         return res.json({
@@ -176,10 +176,10 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
         });
       }
 
-      // Cek Overtime
+      // Overtime check
       if (ticket.play_minutes && ticket.ends_at) {
         const diffMs = now.getTime() - new Date(ticket.ends_at).getTime();
-        // Melewati toleransi 10 menit
+        // Tolerance check
         if (diffMs > 0) {
           const overtimeMinutes = Math.ceil(diffMs / 60000);
           const overtimeFee = overtimeFeeFor(overtimeMinutes);
@@ -248,7 +248,7 @@ router.post('/verify-access', requireGateOrUser, async (req, res) => {
 });
 
 
-// ===== Endpoint di bawah ini WAJIB login (JWT) =====
+// Authenticated endpoints
 router.use(requireAuth);
 
 // GET /api/v1/gate/active-tickets
@@ -318,7 +318,7 @@ router.get('/logs', async (req, res) => {
   }
 });
 
-// POST /api/v1/gate/pay-overtime  (kasir menerima pembayaran denda; tercatat sebagai order + payment)
+// Pay overtime
 router.post('/pay-overtime', async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -385,7 +385,7 @@ router.post('/pay-overtime', async (req, res) => {
       VALUES (?, 'cash', 'manual', 'paid', ?, ?, ?, NOW(), ?, ?, NOW(), NOW())
     `, [orderRes.insertId, fee, cashGiven, cashGiven - fee, req.user.id, req.user.id]);
 
-    // Beri jendela 15 menit untuk keluar setelah denda lunas
+    // Exit grace window
     await conn.query(`
       UPDATE tickets
       SET ends_at = DATE_ADD(NOW(), INTERVAL 15 MINUTE), overtime_minutes = ?, overtime_fee = 0.00, updated_at = NOW()

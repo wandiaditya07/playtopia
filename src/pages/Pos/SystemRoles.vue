@@ -56,7 +56,7 @@
       <button type="button" class="btn-close btn-sm" @click="feedback = null" />
     </div>
 
-    <!-- TAB 1: 3-IN-1 DYNAMIC RBAC (MENU ⊂ ROLE ⊂ USERS) -->
+    <!-- Tab: RBAC Matrix -->
     <div v-if="activeTab === 'matrix'" class="row g-3">
       <!-- Role Selector Cards -->
       <div class="col-12">
@@ -138,7 +138,7 @@
         </div>
       </div>
 
-      <!-- Left Column: Menu Permissions Wrapped in Role (Menu ⊂ Role) -->
+      <!-- Menu permissions -->
       <div class="col-lg-8">
         <div class="pt-panel h-100">
           <div class="pt-panel-header d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -301,7 +301,7 @@
         </div>
       </div>
 
-      <!-- Right Column: Users Wrapped in Role (Role ⊂ Users) -->
+      <!-- Users in role -->
       <div class="col-lg-4">
         <div class="pt-panel h-100 d-flex flex-column">
           <div class="pt-panel-header d-flex justify-content-between align-items-center">
@@ -557,7 +557,7 @@
       </div>
     </div>
 
-    <!-- MODAL 2: BUAT AKUN PENGGUNA BARU DI ROLE INI -->
+    <!-- Modal: User -->
     <div v-if="userModal.open" class="pt-modal-backdrop" @click.self="userModal.open = false">
       <div class="pt-modal-dialog">
         <div class="pt-panel-header d-flex justify-content-between align-items-center">

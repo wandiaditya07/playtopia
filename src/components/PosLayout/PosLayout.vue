@@ -3,7 +3,7 @@
     <!-- Mobile backdrop -->
     <div v-if="mobileOpen" class="pt-mobile-backdrop" @click="mobileOpen = false" />
 
-    <!-- Sidebar (Auto-expand on hover, auto-minimize when cursor leaves sidebar) -->
+    <!-- Sidebar -->
     <PosSidebar
       :collapsed="isCollapsed"
       @mouseenter-sidebar="onSidebarEnter"
@@ -41,7 +41,6 @@ import PosSidebar from './PosSidebar.vue'
 import PosHeader from './PosHeader.vue'
 
 const auth = usePosAuthStore()
-// Default minimized when not hovered; expands on hover or manual toggle
 const isCollapsed = ref(true)
 const mobileOpen = ref(false)
 

@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
       cash_given
     } = req.body || {};
 
-    // ---------- Validasi input ----------
+    // Input validation
     if (!Array.isArray(items) || items.length === 0 || items.length > 50) {
       throw new HttpError(400, 'Keranjang belanja kosong atau terlalu banyak item.');
     }
@@ -80,7 +80,7 @@ router.post('/', async (req, res) => {
 
     await conn.beginTransaction();
 
-    // ---------- Shift milik user yang login atau shift terbuka di outlet ----------
+    // Shift check
     const outlet_id = req.user.outlet_id || 1;
     const [shifts] = await conn.query(
       "SELECT id FROM shifts WHERE status = 'open' AND (user_id = ? OR outlet_id = ?) ORDER BY (user_id = ?) DESC, id DESC LIMIT 1",
@@ -91,7 +91,7 @@ router.post('/', async (req, res) => {
     }
     const shift_id = shifts[0].id;
 
-    // ---------- Harga & data produk SELALU dari database ----------
+    // Product lookup
     const ids = [...new Set(items.map(i => i.product_id))];
     const [productRows] = await conn.query(
       `SELECT id, sku, name, product_type, base_price, play_minutes, covers_children, max_reentry, tolerance_minutes
@@ -108,7 +108,7 @@ router.post('/', async (req, res) => {
       return { item, product: p };
     });
 
-    // ---------- Member & diskon (dihitung server) ----------
+    // Member & discount
     let member = null;
     if (member_id) {
       const [m] = await conn.query("SELECT * FROM members WHERE id = ? AND status = 'active'", [member_id]);
@@ -119,7 +119,7 @@ router.post('/', async (req, res) => {
     const total = subtotal - discount;
     if (total <= 0) throw new HttpError(400, 'Total transaksi harus lebih dari 0.');
 
-    // ---------- Pembayaran ----------
+    // Payment processing
     let method = 'cash';
     let source = 'manual';
     let cashReceived = null;
@@ -142,13 +142,13 @@ router.post('/', async (req, res) => {
       midtransOrderId = `MID-${order_no}`;
     } else if (payment_method === 'DEBIT') {
       method = 'card_edc';
-      cardLast4 = '8888'; // sandbox: nanti diganti data mesin EDC
+      cardLast4 = '8888';
       approvalCode = `APP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     } else {
       if (!member) throw new HttpError(400, 'Pilih member terlebih dahulu untuk bayar dengan saldo.');
       method = 'member_balance';
       source = 'wallet';
-      // Potong saldo secara atomik (mencegah race condition / saldo minus)
+      // Atomic wallet deduction
       const [upd] = await conn.query(
         'UPDATE members SET balance = balance - ?, updated_at = NOW() WHERE id = ? AND balance >= ?',
         [total, member.id, total]);
@@ -157,7 +157,7 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // ---------- Simpan order ----------
+    // Save order
     const [orderRes] = await conn.query(`
       INSERT INTO orders (order_no, outlet_id, shift_id, cashier_id, member_id, source, status, customer_name,
                           subtotal, member_discount, voucher_discount, tax_amount, total, created_at, updated_at)
@@ -173,7 +173,7 @@ router.post('/', async (req, res) => {
       VALUES (?, ?, ?, 'paid', ?, ?, ?, ?, ?, ?, NOW(), ?, ?, NOW(), NOW())
     `, [order_id, method, source, total, cashReceived, changeAmount, cardLast4, approvalCode, midtransOrderId, req.user.id, req.user.id]);
 
-    // ---------- Item & tiket ----------
+    // Order items & tickets
     const datePart = new Date().toISOString().slice(5, 10).replace('-', '');
     const generatedTickets = [];
 

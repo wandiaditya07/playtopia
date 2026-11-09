@@ -40,7 +40,7 @@ async function getShiftStats(shiftId) {
   };
 }
 
-// GET /api/v1/shifts/current -> shift terbuka milik user atau outlet aktif
+// Current shift
 router.get('/current', async (req, res) => {
   try {
     const outletId = req.user.outlet_id || 1;
@@ -66,7 +66,7 @@ router.get('/current', async (req, res) => {
   }
 });
 
-// GET /api/v1/shifts/history
+// Shift history
 router.get('/history', async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -82,7 +82,7 @@ router.get('/history', async (req, res) => {
   }
 });
 
-// POST /api/v1/shifts/open
+// Open shift
 router.post('/open', async (req, res) => {
   try {
     const openingCash = Number(req.body?.opening_cash);
@@ -106,7 +106,7 @@ router.post('/open', async (req, res) => {
   }
 });
 
-// POST /api/v1/shifts/close
+// Close shift
 router.post('/close', async (req, res) => {
   try {
     let shiftId = Number(req.body?.shift_id);

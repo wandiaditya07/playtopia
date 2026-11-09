@@ -1,6 +1,7 @@
 {
-  "name": "sing-app-vue",
-  "version": "6.0.0",
+  "name": "playtopia-pos-system",
+  "version": "1.0.0",
+  "description": "Playtopia Point of Sale, Visitor Management, and Turnstile Gate Control System",
   "private": true,
   "type": "module",
   "scripts": {

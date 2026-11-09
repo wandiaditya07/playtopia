@@ -1,7 +1,7 @@
 <template>
   <header class="pt-header d-print-none">
     <div class="d-flex align-items-center gap-3">
-      <!-- Mobile drawer button (only visible on tablet/mobile where hover is unavailable) -->
+      <!-- Mobile trigger -->
       <button
         type="button"
         class="pt-mobile-trigger d-lg-none"
@@ -37,7 +37,7 @@
         <span>Layar Pelanggan</span>
       </a>
 
-      <!-- User Profile Dropdown (Pure Vue state to prevent legacy Bootstrap .btn/.show layout distortion) -->
+      <!-- Profile dropdown -->
       <div ref="dropdownRef" class="pt-user-dropdown">
         <button
           type="button"

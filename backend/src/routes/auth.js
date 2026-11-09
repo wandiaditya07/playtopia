@@ -6,7 +6,7 @@ import { requireAuth, signToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Hash palsu untuk menyamakan waktu respon saat email tidak ditemukan (anti user-enumeration)
+// Dummy hash
 const DUMMY_HASH = bcrypt.hashSync('dummy-password', 10);
 
 const ROUTE_MAP = {
@@ -181,7 +181,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// GET /api/v1/auth/me -> validasi token + info sisa waktu sesi + menu groups & permissions terbaru
+// GET /me
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const [uRows] = await pool.query(`

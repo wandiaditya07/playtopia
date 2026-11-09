@@ -35,7 +35,7 @@
       <span class="text-muted">Memuat data shift kasir...</span>
     </div>
 
-    <!-- If No Active Shift: Form Buka Shift Baru -->
+    <!-- Open shift -->
     <div v-else-if="!currentShiftData?.shift" class="card shadow-sm border-0 p-4 p-md-5 text-center">
       <h4 class="fw-bold mt-2">Tidak Ada Shift yang Sedang Buka</h4>
       <p class="text-muted mb-4">Silakan masukkan modal awal kas laci untuk membuka shift kasir saat ini:</p>
@@ -124,7 +124,7 @@
         </div>
       </div>
 
-      <!-- Right: Cash Drawer Reconciliation & Submit Closing -->
+      <!-- Cash reconciliation -->
       <div class="col-lg-5">
         <div class="card shadow-sm border-0">
           <div class="card-header bg-danger text-white py-3">
@@ -202,7 +202,7 @@
               </small>
             </div>
 
-            <!-- Button Tutup Shift (Full Action: Disable jika tidak valid) -->
+            <!-- Submit closing -->
             <button
               class="btn btn-lg w-100 py-3 fw-bold shadow-sm btn-close-shift"
               :disabled="isClosingDisabled"
@@ -313,7 +313,7 @@ const isClosingDisabled = computed(() => {
   if (actualClosingCash.value === null || actualClosingCash.value === undefined || Number(actualClosingCash.value) < 0) {
     return true
   }
-  // Jika ada selisih kas, catatan kasir WAJIB diisi
+  // Notes required on variance
   if (cashVariance.value !== 0 && !closingNotes.value.trim()) {
     return true
   }
