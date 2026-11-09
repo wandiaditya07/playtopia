@@ -414,8 +414,8 @@
               <span class="fw-semibold text-dark">Konfigurasi Laporan Otomatis via Email</span>
               <span class="badge" style="background-color: #e0f2fe; color: #0284c7; font-size: 11px;">Fitur #14</span>
             </div>
-            <span class="pt-tag" :class="emailConfig.smtp_configured ? 'text-success' : 'text-primary'">
-              {{ emailConfig.smtp_configured ? 'SMTP Aktif' : 'Engine Aktif (Simulasi/Log)' }}
+            <span class="pt-tag" :class="emailConfig.smtp_configured ? 'text-success' : 'text-warning'">
+              {{ emailConfig.smtp_configured ? '✓ SMTP Gmail Terhubung' : 'Perlu App Password (Admin)' }}
             </span>
           </div>
           <div class="p-3">
@@ -423,23 +423,125 @@
               <strong>Otomatisasi Laporan Aktif:</strong> Laporan operasional dikirim otomatis setiap malam pukul <strong>22:00 WIB</strong> dan setiap kali kasir melakukan <strong>Tutup Shift (Closing)</strong>.
             </div>
 
-            <!-- Target Email Input -->
-            <div class="mb-3">
-              <label class="form-label fw-semibold text-secondary mb-1" style="font-size: 12px;">Alamat Email Penerima Laporan (Owner / Manajemen)</label>
-              <div class="input-group">
-                <span class="input-group-text bg-white text-muted">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                </span>
-                <input
-                  v-model.trim="emailTarget"
-                  type="email"
-                  class="form-control font-monospace"
-                  placeholder="testgmailjs@gmail.com"
-                />
+            <!-- Tampilan jika BUKAN Admin: Email & Kode disembunyikan -->
+            <div v-if="!isAdmin" class="p-3 rounded border bg-light mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-semibold text-secondary small">Email Tujuan &amp; Kode SMTP:</span>
+                <span class="badge bg-secondary-subtle text-secondary">Khusus Admin (Disembunyikan)</span>
               </div>
-              <small class="text-muted d-block mt-1" style="font-size: 11px;">
-                Semua rekap harian dan notifikasi selisih kas closing dikirim ke alamat ini.
+              <small class="text-muted d-block" style="font-size: 11.5px;">
+                Hanya pengguna dengan role <strong>Admin</strong> yang dapat melihat dan mengganti alamat email penerima maupun 16-digit kode App Password Google.
               </small>
+            </div>
+
+            <!-- Tampilan KHUSUS ADMIN: Bisa lihat/sembunyikan & ganti Email + Kode 16-Digit App Password -->
+            <div v-else>
+              <!-- Target Email Input with Show/Hide toggle -->
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label fw-semibold text-secondary m-0" style="font-size: 12px;">
+                    Alamat Email Penerima Laporan (Khusus Admin)
+                  </label>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold"
+                    style="font-size: 11.5px;"
+                    @click="showAdminEmailText = !showAdminEmailText"
+                  >
+                    {{ showAdminEmailText ? 'Sembunyikan Email' : 'Tampilkan Email' }}
+                  </button>
+                </div>
+                <div class="input-group">
+                  <span class="input-group-text bg-white text-muted">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  </span>
+                  <input
+                    v-if="showAdminEmailText"
+                    v-model.trim="emailTarget"
+                    type="email"
+                    class="form-control font-monospace"
+                    placeholder="Masukkan alamat Gmail..."
+                    @input="smtpForm.smtp_user = emailTarget"
+                  />
+                  <input
+                    v-else
+                    :value="maskEmail(emailTarget)"
+                    type="text"
+                    class="form-control font-monospace bg-light text-muted"
+                    readonly
+                  />
+                </div>
+                <small class="text-muted d-block mt-1" style="font-size: 11px;">
+                  Klik "Tampilkan Email" di kanan atas untuk melihat atau mengganti alamat email penerima laporan.
+                </small>
+              </div>
+
+              <!-- Pengaturan Koneksi SMTP Gmail & 16-Digit Kode App Password (Khusus Admin) -->
+              <div class="p-3 rounded border mb-3" :style="emailConfig.smtp_configured ? 'background-color: #f0fdf4; border-color: #bbf7d0 !important;' : 'background-color: #fffbeb; border-color: #fde68a !important;'">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fw-bold small" :class="emailConfig.smtp_configured ? 'text-success' : 'text-dark'">
+                    {{ emailConfig.smtp_configured ? '✓ Koneksi SMTP & Kode App Password Aktif' : 'Pengaturan Kode 16-Digit App Password Gmail' }}
+                  </span>
+                  <a
+                    href="https://myaccount.google.com/apppasswords"
+                    target="_blank"
+                    rel="noopener"
+                    class="small fw-bold text-decoration-none"
+                    style="font-size: 11.5px;"
+                  >
+                    Buat 16-Digit App Password Baru ↗
+                  </a>
+                </div>
+                <p class="text-muted small mb-2" style="font-size: 11.5px;">
+                  Saat Admin mengganti alamat email, pastikan juga mengganti <strong>16-digit Kode Sandi Aplikasi (App Password)</strong> yang sesuai dengan akun Gmail tersebut:
+                </p>
+
+                <div class="mb-2">
+                  <label class="form-label small fw-semibold text-secondary mb-1" style="font-size: 11.5px;">Email Pengirim (SMTP Gmail):</label>
+                  <input
+                    v-if="showAdminEmailText"
+                    v-model.trim="smtpForm.smtp_user"
+                    type="email"
+                    class="form-control form-control-sm font-monospace"
+                    placeholder="Masukkan email Gmail pengirim..."
+                  />
+                  <input
+                    v-else
+                    :value="maskEmail(smtpForm.smtp_user || emailTarget)"
+                    type="text"
+                    class="form-control form-control-sm font-monospace bg-light text-muted"
+                    readonly
+                  />
+                </div>
+
+                <div class="mb-2">
+                  <label class="form-label small fw-semibold text-secondary mb-1" style="font-size: 11.5px;">Kode 16-Digit Google App Password:</label>
+                  <div class="input-group input-group-sm">
+                    <input
+                      v-model="smtpForm.smtp_pass"
+                      :type="showAdminCodeText ? 'text' : 'password'"
+                      class="form-control font-monospace"
+                      placeholder="Masukkan 16-digit kode App Password..."
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary fw-semibold"
+                      @click="showAdminCodeText = !showAdminCodeText"
+                    >
+                      {{ showAdminCodeText ? 'Sembunyikan Kode' : 'Lihat Kode' }}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary w-100 fw-semibold mt-1"
+                  :disabled="savingSmtp || !smtpForm.smtp_user || !smtpForm.smtp_pass"
+                  @click="saveSmtpSettings"
+                >
+                  {{ savingSmtp ? 'Memverifikasi & Menyimpan...' : 'Simpan Perubahan Email & Kode App Password' }}
+                </button>
+              </div>
             </div>
 
             <!-- Jadwal Info -->
@@ -459,7 +561,7 @@
             </div>
 
             <!-- Feedback Alert -->
-            <div v-if="emailFeedback" class="alert py-2 px-3 small mb-3" :class="emailFeedback.type === 'success' ? 'alert-success' : 'alert-danger'">
+            <div v-if="emailFeedback" class="alert py-2 px-3 small mb-3" :class="emailFeedback.type === 'success' ? 'alert-success' : emailFeedback.type === 'warning' ? 'alert-warning' : 'alert-danger'">
               {{ emailFeedback.text }}
             </div>
 
@@ -482,6 +584,15 @@
               >
                 <span>Kirim Tes Verifikasi Email</span>
               </button>
+              <a
+                v-if="isAdmin"
+                :href="dailyGmailComposeUrl"
+                target="_blank"
+                rel="noopener"
+                class="pt-btn-outline text-decoration-none d-flex align-items-center gap-1"
+              >
+                <span>Kirim via Gmail Web ↗</span>
+              </a>
             </div>
           </div>
         </div>
@@ -518,7 +629,7 @@
             <div class="border rounded p-3 bg-light font-monospace small" style="font-size: 12px; line-height: 1.6;">
               <div class="fw-bold text-dark border-bottom pb-1 mb-2">FORMAT EMAIL YANG AKAN DITERIMA:</div>
               <div>Subjek: [Playtopia POS] Rekap Harian Otomatis - {{ new Date().toLocaleDateString('id-ID') }}</div>
-              <div>Penerima: {{ emailTarget }}</div>
+              <div>Penerima: {{ isAdmin && showAdminEmailText ? emailTarget : maskEmail(emailTarget) }}</div>
               <div>----------------------------------------</div>
               <div>- Total Transaksi: {{ dailyPreview?.stats?.total_transactions || 0 }} Trx</div>
               <div>- Total Pengunjung: {{ dailyPreview?.visitorsCount || 0 }} Orang</div>
@@ -586,8 +697,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '@/utils/posApi'
 import { rupiah, fmtDateTime } from '@/utils/format'
+import { usePosAuthStore } from '@/stores/posAuth'
 
 const route = useRoute()
+const auth = usePosAuthStore()
+const isAdmin = computed(() => auth.user?.role === 'Admin' || Number(auth.user?.role_id) === 2)
 
 const section = computed(() => {
   const p = route.path
@@ -873,17 +987,56 @@ function handleExport() {
   }
 }
 
-const emailTarget = ref('testgmailjs@gmail.com')
+const emailTarget = ref('rnurfadil5@gmail.com')
 const sendingEmail = ref(false)
+const savingSmtp = ref(false)
 const emailFeedback = ref(null)
+const showAdminEmailText = ref(false)
+const showAdminCodeText = ref(false)
+
+function maskEmail(email) {
+  if (!isAdmin.value) return 'Email Admin Terdaftar (Disembunyikan)'
+  const e = String(email || '').trim()
+  if (!e || !e.includes('@')) return '••••••••@gmail.com'
+  const [name, domain] = e.split('@')
+  const visible = name.slice(0, 2)
+  return `${visible}${'•'.repeat(Math.max(4, name.length - 2))}@${domain}`
+}
+
 const emailConfig = reactive({
-  target_email: 'testgmailjs@gmail.com',
+  target_email: 'rnurfadil5@gmail.com',
   schedule_time: '22:00 WIB (Harian Otomatis)',
   on_shift_close: true,
   smtp_configured: false,
+  smtp_user: 'rnurfadil5@gmail.com',
   last_sent_at: null
 })
+const smtpForm = reactive({
+  smtp_user: 'rnurfadil5@gmail.com',
+  smtp_pass: ''
+})
 const dailyPreview = ref(null)
+
+const dailyGmailComposeUrl = computed(() => {
+  const to = encodeURIComponent((emailTarget.value || 'rnurfadil5@gmail.com').trim())
+  const dateStr = new Date().toLocaleDateString('id-ID')
+  const subject = encodeURIComponent(`[Playtopia POS] Rekap Harian Otomatis - ${dateStr}`)
+  const s = dailyPreview.value?.stats || {}
+  const body = encodeURIComponent(
+`=== LAPORAN REKAP HARIAN PLAYTOPIA POS ===
+Tanggal: ${dateStr}
+Total Transaksi: ${s.total_transactions || 0} Trx
+Total Pengunjung: ${dailyPreview.value?.visitorsCount || 0} Orang
+----------------------------------------
+Omset Playground: ${rupiah(s.playground_sales || 0)}
+Omset Cafe & F&B: ${rupiah(s.cafe_sales || 0)}
+TOTAL OMSET: ${rupiah(s.total_revenue || 0)}
+----------------------------------------
+Tunai: ${rupiah(s.cash_total || 0)}
+Non-Tunai: ${rupiah((s.qris_total || 0) + (s.debit_total || 0) + (s.member_balance_total || 0))}`
+  )
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`
+})
 
 async function loadEmailConfig() {
   try {
@@ -893,7 +1046,9 @@ async function loadEmailConfig() {
     ])
     if (cfgRes?.success && cfgRes.data) {
       Object.assign(emailConfig, cfgRes.data)
-      if (cfgRes.data.target_email) emailTarget.value = cfgRes.data.target_email
+      if (isAdmin.value && cfgRes.data.target_email) emailTarget.value = cfgRes.data.target_email
+      if (isAdmin.value && cfgRes.data.smtp_user) smtpForm.smtp_user = cfgRes.data.smtp_user
+      if (isAdmin.value && cfgRes.data.smtp_pass) smtpForm.smtp_pass = cfgRes.data.smtp_pass
     }
     if (previewRes?.success && previewRes.data) {
       dailyPreview.value = previewRes.data
@@ -903,18 +1058,57 @@ async function loadEmailConfig() {
   }
 }
 
+async function saveSmtpSettings() {
+  savingSmtp.value = true
+  emailFeedback.value = null
+  try {
+    const res = await api('/reports/smtp-config', {
+      method: 'POST',
+      body: {
+        smtp_user: smtpForm.smtp_user.trim(),
+        smtp_pass: smtpForm.smtp_pass.trim(),
+        target_email: emailTarget.value.trim()
+      }
+    })
+    if (res.success) {
+      emailConfig.smtp_configured = true
+      emailConfig.smtp_user = smtpForm.smtp_user.trim()
+      if (res.data?.smtp_pass) {
+        smtpForm.smtp_pass = res.data.smtp_pass
+      }
+      emailFeedback.value = {
+        type: 'success',
+        text: `✓ ${res.message || 'SMTP Gmail & Kode App Password berhasil disimpan!'}`
+      }
+    } else {
+      emailFeedback.value = {
+        type: 'danger',
+        text: res.message || 'Gagal menghubungkan SMTP Gmail.'
+      }
+    }
+  } catch (err) {
+    emailFeedback.value = {
+      type: 'danger',
+      text: err.message || 'Gagal menghubungkan SMTP Gmail.'
+    }
+  } finally {
+    savingSmtp.value = false
+  }
+}
+
 async function sendDailyReportNow() {
   sendingEmail.value = true
   emailFeedback.value = null
   try {
     const res = await api('/reports/send-daily', {
       method: 'POST',
-      body: { email: emailTarget.value.trim() }
+      body: { email: isAdmin.value ? emailTarget.value.trim() : '' }
     })
     if (res.success) {
+      const isLive = res.data?.mode === 'live_smtp'
       emailFeedback.value = {
-        type: 'success',
-        text: `✓ Laporan rekap harian berhasil dikirim ke: ${emailTarget.value.trim()}`
+        type: isLive ? 'success' : 'warning',
+        text: res.message || 'Laporan rekap harian berhasil diproses.'
       }
       emailConfig.last_sent_at = new Date().toISOString()
     } else {
@@ -939,12 +1133,13 @@ async function sendTestEmailNow() {
   try {
     const res = await api('/reports/test-email', {
       method: 'POST',
-      body: { email: emailTarget.value.trim() }
+      body: { email: isAdmin.value ? emailTarget.value.trim() : '' }
     })
     if (res.success) {
+      const isLive = res.data?.mode === 'live_smtp'
       emailFeedback.value = {
-        type: 'success',
-        text: `✓ Email uji coba (test verification) berhasil dikirim ke: ${emailTarget.value.trim()}`
+        type: isLive ? 'success' : 'warning',
+        text: res.message || 'Email uji coba berhasil diproses.'
       }
     } else {
       emailFeedback.value = {

@@ -1,6 +1,6 @@
 import express from 'express';
 import { pool } from '../db_mysql.js';
-import { sendShiftClosingEmail, DEFAULT_REPORT_EMAIL } from '../services/mailer.js';
+import { sendShiftClosingEmail, getTargetEmail } from '../services/mailer.js';
 
 const router = express.Router();
 
@@ -114,13 +114,12 @@ router.post('/close', async (req, res) => {
     const countedRaw = req.body?.closing_cash_actual ?? req.body?.actual_closing_cash;
     const counted = Number(countedRaw);
     const notes = String(req.body?.notes || '').trim();
-    const ownerEmail = String(req.body?.owner_email || '').trim();
+    const isAdmin = req.user?.role === 'Admin' || Number(req.user?.role_id) === 2;
+    const rawOwnerEmail = String(req.body?.owner_email || '').trim();
+    const ownerEmail = (isAdmin && rawOwnerEmail && /^\S+@\S+\.\S+$/.test(rawOwnerEmail)) ? rawOwnerEmail : '';
 
     if (!Number.isFinite(counted) || counted < 0) {
       return res.status(400).json({ success: false, message: 'Uang fisik di laci harus berupa angka 0 atau lebih.' });
-    }
-    if (ownerEmail && !/^\S+@\S+\.\S+$/.test(ownerEmail)) {
-      return res.status(400).json({ success: false, message: 'Format email owner tidak valid.' });
     }
 
     let shift;
@@ -182,7 +181,7 @@ Selisih          : ${rp(variance)} ${variance === 0 ? '(PAS)' : variance > 0 ? '
 Catatan: ${notes || '-'}
     `.trim();
 
-    const targetRecipient = ownerEmail || DEFAULT_REPORT_EMAIL;
+    const targetRecipient = getTargetEmail(ownerEmail);
     let emailStatus = null;
     try {
       emailStatus = await sendShiftClosingEmail({
@@ -223,7 +222,11 @@ Catatan: ${notes || '-'}
 router.post('/:id/send-email', async (req, res) => {
   try {
     const shiftId = Number(req.params.id);
-    const targetEmail = String(req.body?.email || '').trim() || DEFAULT_REPORT_EMAIL;
+    const isAdmin = req.user?.role === 'Admin' || Number(req.user?.role_id) === 2;
+    const rawEmail = String(req.body?.email || '').trim();
+    const targetEmail = (isAdmin && rawEmail && /^\S+@\S+\.\S+$/.test(rawEmail))
+      ? rawEmail
+      : getTargetEmail();
 
     const [shifts] = await pool.query('SELECT * FROM shifts WHERE id = ?', [shiftId]);
     if (shifts.length === 0) {

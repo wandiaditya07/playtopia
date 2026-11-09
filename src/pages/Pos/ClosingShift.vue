@@ -209,20 +209,98 @@
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                   Laporan Otomatis via Email
                 </label>
-                <span class="badge" style="background-color: #e0f2fe; color: #0284c7; font-size: 10px;">Fitur #14</span>
+                <span class="badge" :style="smtpConfigured ? 'background-color: #dcfce7; color: #15803d; font-size: 10px;' : 'background-color: #fef3c7; color: #b45309; font-size: 10px;'">
+                  {{ smtpConfigured ? 'SMTP Gmail Aktif' : 'Perlu App Password (Admin)' }}
+                </span>
               </div>
-              <div class="input-group input-group-sm mt-1">
-                <span class="input-group-text bg-white text-muted">Kirim ke:</span>
-                <input
-                  type="email"
-                  v-model="ownerEmail"
-                  class="form-control"
-                  placeholder="testgmailjs@gmail.com"
-                />
+
+              <!-- Tampilan untuk NON-ADMIN (Kasir / Staff): Email & Kode di-hide -->
+              <div v-if="!isAdmin" class="mt-1">
+                <div class="p-2 rounded bg-white border d-flex align-items-center justify-content-between" style="font-size: 12px;">
+                  <span class="text-muted">Tujuan Pengiriman:</span>
+                  <span class="badge bg-secondary-subtle text-secondary font-monospace">Email Admin Terdaftar (Disembunyikan)</span>
+                </div>
+                <small class="text-muted d-block mt-1" style="font-size: 11px;">
+                  Salinan rekap omset dan rekonsiliasi kas akan otomatis dikirim ke email Admin/Manajemen saat shift ditutup.
+                </small>
               </div>
-              <small class="text-muted d-block mt-1" style="font-size: 11px;">
-                Salinan rekap omset dan rekonsiliasi kas akan otomatis dikirim ke email di atas saat shift ditutup.
-              </small>
+
+              <!-- Tampilan khusus ADMIN: Bisa lihat/sembunyikan dan ubah Email + 16-digit Kode App Password kapan saja -->
+              <div v-else class="mt-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <small class="text-muted" style="font-size: 11px;">
+                    Email Aktif:
+                    <strong class="text-dark font-monospace">
+                      {{ showAdminEmailConfig ? (ownerEmail || 'Belum diatur') : maskEmailDisplay(ownerEmail) }}
+                    </strong>
+                  </small>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary py-0 px-2"
+                    style="font-size: 11px;"
+                    @click="showAdminEmailConfig = !showAdminEmailConfig"
+                  >
+                    {{ showAdminEmailConfig ? 'Sembunyikan Pengaturan' : 'Lihat / Ubah Email & Kode (Admin)' }}
+                  </button>
+                </div>
+
+                <div v-if="showAdminEmailConfig" class="p-2 rounded bg-white border mt-1">
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold text-muted mb-1" style="font-size: 11px;">Email Tujuan &amp; Pengirim (Admin):</label>
+                    <input
+                      type="email"
+                      v-model="ownerEmail"
+                      class="form-control form-control-sm font-monospace"
+                      placeholder="Masukkan alamat Gmail baru..."
+                    />
+                  </div>
+
+                  <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label small fw-semibold text-muted m-0" style="font-size: 11px;">
+                        Kode 16-Digit Google App Password:
+                      </label>
+                      <a
+                        href="https://myaccount.google.com/apppasswords"
+                        target="_blank"
+                        rel="noopener"
+                        class="small text-decoration-none fw-bold"
+                        style="font-size: 11px;"
+                      >
+                        Buat Kode Baru ↗
+                      </a>
+                    </div>
+                    <div class="input-group input-group-sm">
+                      <input
+                        :type="showSmtpPassText ? 'text' : 'password'"
+                        v-model="quickSmtpPass"
+                        class="form-control font-monospace"
+                        placeholder="16 digit kode App Password..."
+                      />
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        @click="showSmtpPassText = !showSmtpPassText"
+                      >
+                        {{ showSmtpPassText ? 'Sembunyikan' : 'Lihat Kode' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary w-100 fw-semibold"
+                    :disabled="savingSmtp || !ownerEmail.trim() || !quickSmtpPass.trim()"
+                    @click="saveQuickSmtp"
+                  >
+                    {{ savingSmtp ? 'Memverifikasi & Menyimpan...' : 'Simpan Email & Kode App Password' }}
+                  </button>
+
+                  <small v-if="smtpSetupMsg" class="d-block mt-1" :class="smtpSetupSuccess ? 'text-success fw-semibold' : 'text-danger'" style="font-size: 11px;">
+                    {{ smtpSetupMsg }}
+                  </small>
+                </div>
+              </div>
             </div>
 
             <!-- Submit closing -->
@@ -249,24 +327,78 @@
         <p class="text-muted small mb-2">Shift telah ditutup dan rekonsiliasi kas telah tercatat ke database.</p>
 
         <!-- Notifikasi Status Pengiriman Email -->
-        <div v-if="emailDeliveryStatus" class="alert alert-success d-flex align-items-center justify-content-between py-2 px-3 small mb-3">
-          <div class="d-flex align-items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <div v-if="emailDeliveryStatus" class="alert py-2 px-3 small mb-3" :class="emailDeliveryStatus.mode === 'live_smtp' ? 'alert-success' : 'alert-warning'">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div>
-              <strong>Laporan Email Terkirim:</strong> Salinan dikirim ke <code>{{ ownerEmail }}</code>
+              <div v-if="emailDeliveryStatus.mode === 'live_smtp'">
+                <strong>✓ Email Terkirim ke Inbox:</strong>
+                <span v-if="isAdmin"> Laporan resmi telah dikirim ke <code>{{ ownerEmail }}</code></span>
+                <span v-else> Laporan resmi telah dikirim otomatis ke email Manajemen/Admin terdaftar.</span>
+              </div>
+              <div v-else>
+                <strong>Mode Simulasi:</strong>
+                <span v-if="isAdmin"> File laporan HTML untuk <code>{{ ownerEmail }}</code> telah dibuat. Silakan pastikan 16-digit App Password Gmail sudah sesuai.</span>
+                <span v-else> Laporan closing shift telah dicatat di sistem untuk Admin.</span>
+              </div>
+            </div>
+            <div class="d-flex gap-1">
+              <button
+                type="button"
+                class="btn btn-sm py-1 px-2"
+                :class="emailDeliveryStatus.mode === 'live_smtp' ? 'btn-outline-success' : 'btn-outline-dark'"
+                :disabled="sendingEmail"
+                @click="resendEmailReport"
+              >
+                {{ sendingEmail ? 'Mengirim...' : 'Kirim Ulang' }}
+              </button>
+              <a
+                v-if="isAdmin"
+                :href="gmailComposeUrl"
+                target="_blank"
+                rel="noopener"
+                class="btn btn-sm btn-danger py-1 px-2 text-white text-decoration-none"
+              >
+                Kirim via Gmail Web ↗
+              </a>
             </div>
           </div>
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-success py-0 px-2"
-            :disabled="sendingEmail"
-            @click="resendEmailReport"
-          >
-            {{ sendingEmail ? 'Mengirim...' : 'Kirim Ulang' }}
-          </button>
+
+          <!-- Inline App Password Input inside Modal (Hanya untuk Admin jika belum aktif) -->
+          <div v-if="isAdmin && emailDeliveryStatus.mode !== 'live_smtp'" class="mt-2 pt-2 border-top border-warning-subtle">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-semibold" style="font-size: 11px;">Masukkan 16-Digit Google App Password (akun {{ ownerEmail }}) untuk kirim otomatis sekarang:</span>
+              <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener" class="fw-bold text-decoration-none" style="font-size: 11px;">Ambil App Password ↗</a>
+            </div>
+            <div class="input-group input-group-sm">
+              <input
+                :type="showSmtpPassText ? 'text' : 'password'"
+                v-model="quickSmtpPass"
+                class="form-control font-monospace"
+                placeholder="16 digit App Password Gmail..."
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                @click="showSmtpPassText = !showSmtpPassText"
+              >
+                {{ showSmtpPassText ? 'Sembunyikan' : 'Lihat Kode' }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary fw-bold"
+                :disabled="savingSmtp || !quickSmtpPass.trim()"
+                @click="saveQuickSmtpAndResend"
+              >
+                {{ savingSmtp ? 'Memverifikasi...' : 'Simpan & Kirim' }}
+              </button>
+            </div>
+            <small v-if="smtpSetupMsg" class="d-block mt-1" :class="smtpSetupSuccess ? 'text-success fw-bold' : 'text-danger'">
+              {{ smtpSetupMsg }}
+            </small>
+          </div>
         </div>
 
-        <pre class="bg-light p-3 rounded font-monospace small mb-3" style="max-height: 320px; overflow-y: auto;">{{ reportText }}</pre>
+        <div class="bg-light p-3 rounded font-monospace small mb-3 w-100 border text-dark" style="white-space: pre-wrap; max-height: 280px; overflow-y: auto; line-height: 1.55;">{{ reportText }}</div>
         <div class="d-flex justify-content-end gap-2">
           <button class="btn btn-outline-secondary" type="button" @click="printReport">
             Cetak Ringkasan
@@ -284,6 +416,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '@/utils/posApi'
 import { rupiah, fmtDateTime } from '@/utils/format'
+import { usePosAuthStore } from '@/stores/posAuth'
+
+const auth = usePosAuthStore()
+const isAdmin = computed(() => auth.user?.role === 'Admin' || Number(auth.user?.role_id) === 2)
 
 const currentShiftData = ref(null)
 const loading = ref(false)
@@ -299,10 +435,92 @@ const closingNotes = ref('')
 
 const closingReportModal = ref(false)
 const reportText = ref('')
-const ownerEmail = ref('testgmailjs@gmail.com')
+const ownerEmail = ref('rnurfadil5@gmail.com')
 const emailDeliveryStatus = ref(null)
 const sendingEmail = ref(false)
 const closedShiftId = ref(null)
+
+const smtpConfigured = ref(false)
+const quickSmtpPass = ref('')
+const savingSmtp = ref(false)
+const smtpSetupMsg = ref('')
+const smtpSetupSuccess = ref(false)
+const showAdminEmailConfig = ref(false)
+const showSmtpPassText = ref(false)
+
+function maskEmailDisplay(email) {
+  const e = String(email || '').trim()
+  if (!e || !e.includes('@')) return '••••••••@gmail.com'
+  const [name, domain] = e.split('@')
+  const visible = name.slice(0, 2)
+  return `${visible}${'•'.repeat(Math.max(4, name.length - 2))}@${domain}`
+}
+
+const gmailComposeUrl = computed(() => {
+  const to = encodeURIComponent((ownerEmail.value || 'rnurfadil5@gmail.com').trim())
+  const subject = encodeURIComponent(`[Playtopia POS] Laporan Closing Shift #${closedShiftId.value || ''}`)
+  const body = encodeURIComponent(reportText.value || '')
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`
+})
+
+async function fetchEmailConfigStatus() {
+  try {
+    const res = await api('/reports/email-config')
+    if (res.success && res.data) {
+      smtpConfigured.value = Boolean(res.data.smtp_configured)
+      if (isAdmin.value && res.data.target_email) {
+        ownerEmail.value = res.data.target_email
+      }
+      if (isAdmin.value && res.data.smtp_pass) {
+        quickSmtpPass.value = res.data.smtp_pass
+      }
+    }
+  } catch (err) {
+    console.warn('Email config check error:', err)
+  }
+}
+
+async function saveQuickSmtp() {
+  if (!quickSmtpPass.value.trim()) return false
+  savingSmtp.value = true
+  smtpSetupMsg.value = ''
+  try {
+    const res = await api('/reports/smtp-config', {
+      method: 'POST',
+      body: {
+        smtp_user: (ownerEmail.value || 'rnurfadil5@gmail.com').trim(),
+        smtp_pass: quickSmtpPass.value.trim(),
+        target_email: (ownerEmail.value || 'rnurfadil5@gmail.com').trim()
+      }
+    })
+    if (res.success) {
+      smtpConfigured.value = true
+      smtpSetupSuccess.value = true
+      smtpSetupMsg.value = res.message || 'SMTP Gmail berhasil diaktifkan!'
+      if (res.data?.smtp_pass) {
+        quickSmtpPass.value = res.data.smtp_pass
+      }
+      return true
+    } else {
+      smtpSetupSuccess.value = false
+      smtpSetupMsg.value = res.message || 'Gagal memverifikasi App Password Gmail.'
+      return false
+    }
+  } catch (err) {
+    smtpSetupSuccess.value = false
+    smtpSetupMsg.value = err.message || 'Gagal memverifikasi App Password Gmail.'
+    return false
+  } finally {
+    savingSmtp.value = false
+  }
+}
+
+async function saveQuickSmtpAndResend() {
+  const ok = await saveQuickSmtp()
+  if (ok && closedShiftId.value) {
+    await resendEmailReport()
+  }
+}
 
 async function fetchCurrentShift() {
   loading.value = true
@@ -402,7 +620,7 @@ async function submitClosing() {
       body: {
         actual_closing_cash: Number(actualClosingCash.value),
         notes: closingNotes.value.trim(),
-        owner_email: ownerEmail.value.trim()
+        owner_email: isAdmin.value ? ownerEmail.value.trim() : ''
       }
     })
 
@@ -413,6 +631,10 @@ async function submitClosing() {
       } else {
         emailDeliveryStatus.value = { success: true, recipient: ownerEmail.value }
       }
+
+      const emailLine = isAdmin.value
+        ? `Terkirim ke ${ownerEmail.value.trim()}`
+        : 'Terkirim ke Email Admin Terdaftar'
 
       reportText.value =
 `==============================================
@@ -433,7 +655,7 @@ Kas Fisik     : ${rupiah(actualClosingCash.value)}
 Selisih Kas   : ${(cashVariance.value >= 0 ? '+' : '') + rupiah(cashVariance.value)}
 
 Catatan Kasir : ${closingNotes.value || '-'}
-Laporan Email : Terkirim ke ${ownerEmail.value.trim()}
+Laporan Email : ${emailLine}
 ==============================================
 Status: CLOSED & AUDITED`
 
@@ -458,10 +680,10 @@ async function resendEmailReport() {
   try {
     const res = await api(`/shifts/${closedShiftId.value}/send-email`, {
       method: 'POST',
-      body: { email: ownerEmail.value.trim() }
+      body: { email: isAdmin.value ? ownerEmail.value.trim() : '' }
     })
-    if (res.success) {
-      emailDeliveryStatus.value = { success: true, recipient: ownerEmail.value }
+    if (res.success && res.data) {
+      emailDeliveryStatus.value = res.data
     }
   } catch (err) {
     console.error('Gagal kirim ulang email:', err)
@@ -481,6 +703,7 @@ function printReport() {
 
 onMounted(() => {
   fetchCurrentShift()
+  fetchEmailConfigStatus()
 })
 </script>
 

@@ -7,21 +7,35 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Default destination email
-export const DEFAULT_REPORT_EMAIL = process.env.REPORT_TARGET_EMAIL || 'testgmailjs@gmail.com';
+export const DEFAULT_REPORT_EMAIL = process.env.REPORT_TARGET_EMAIL || 'rnurfadil5@gmail.com';
+
+export function getTargetEmail(customEmail) {
+  return (customEmail || '').trim() || process.env.REPORT_TARGET_EMAIL || 'rnurfadil5@gmail.com';
+}
 
 // Directory to store email logs/previews if SMTP is not yet configured
 const EMAIL_LOGS_DIR = path.resolve(__dirname, '../../logs/sent-emails');
+const ENV_FILE_PATH = path.resolve(__dirname, '../../.env');
+
 if (!fs.existsSync(EMAIL_LOGS_DIR)) {
   fs.mkdirSync(EMAIL_LOGS_DIR, { recursive: true });
 }
 
-function getTransporter() {
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
+export function getTransporter() {
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
 
   if (user && pass) {
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    if (host.includes('gmail') || user.endsWith('@gmail.com')) {
+      return nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user, pass }
+      });
+    }
+
     return nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      host,
       port: Number(process.env.SMTP_PORT) || 587,
       secure: process.env.SMTP_SECURE === 'true' || Number(process.env.SMTP_PORT) === 465,
       auth: { user, pass }
@@ -32,12 +46,85 @@ function getTransporter() {
   return null;
 }
 
+export async function verifyAndSaveSmtpConfig({ smtp_user, smtp_pass, target_email }) {
+  const cleanUser = String(smtp_user || '').trim();
+  const cleanPass = String(smtp_pass || '').replace(/\s+/g, '');
+  const cleanTarget = String(target_email || '').trim() || cleanUser || 'rnurfadil5@gmail.com';
+
+  if (!cleanPass) {
+    throw new Error('Sandi Aplikasi 16 digit (App Password) wajib diisi.');
+  }
+
+  // Candidate Gmail accounts to test with the provided 16-digit App Password
+  // (in case the user changed "Kirim ke" to another email while the App Password belongs to their main Gmail)
+  const candidates = [...new Set([
+    cleanUser,
+    cleanTarget,
+    process.env.SMTP_USER,
+    'rnurfadil5@gmail.com',
+    'impactkonin@gmail.com'
+  ].filter(Boolean).map(e => String(e).trim()))];
+
+  let verifiedUser = null;
+  let lastError = null;
+
+  for (const candidateEmail of candidates) {
+    try {
+      const testTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: candidateEmail, pass: cleanPass }
+      });
+      await testTransporter.verify();
+      verifiedUser = candidateEmail;
+      break;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!verifiedUser) {
+    throw new Error(lastError?.message || 'App Password ditolak oleh Gmail. Pastikan 16 digit App Password sesuai dengan akun Gmail Anda.');
+  }
+
+  // Save in-memory immediately (no server restart needed)
+  process.env.SMTP_USER = verifiedUser;
+  process.env.SMTP_PASS = cleanPass;
+  process.env.REPORT_TARGET_EMAIL = cleanTarget;
+
+  // Persist to backend/.env
+  const envContent = [
+    `DB_HOST=${process.env.DB_HOST || '100.113.174.74'}`,
+    `DB_USER=${process.env.DB_USER || 'wandi'}`,
+    `DB_PASSWORD=${process.env.DB_PASSWORD || 'wandi123'}`,
+    `DB_NAME=${process.env.DB_NAME || 'playtopia_id'}`,
+    `PORT=${process.env.PORT || '8080'}`,
+    `REPORT_TARGET_EMAIL=${cleanTarget}`,
+    `SMTP_HOST=smtp.gmail.com`,
+    `SMTP_PORT=587`,
+    `SMTP_SECURE=false`,
+    `SMTP_USER=${verifiedUser}`,
+    `SMTP_PASS=${cleanPass}`
+  ].join('\n') + '\n';
+
+  fs.writeFileSync(ENV_FILE_PATH, envContent, 'utf8');
+
+  return {
+    smtp_configured: true,
+    smtp_user: verifiedUser,
+    target_email: cleanTarget
+  };
+}
+
 export async function sendEmail({ to, subject, html, text }) {
-  const recipient = to || DEFAULT_REPORT_EMAIL;
-  const from = process.env.SMTP_FROM || '"Playtopia POS Auto-Report" <reports@playtopia.id>';
+  const recipient = getTargetEmail(to);
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  const from = smtpUser
+    ? `"Playtopia POS Auto-Report" <${smtpUser}>`
+    : (process.env.SMTP_FROM || '"Playtopia POS Auto-Report" <reports@playtopia.id>');
   const transporter = getTransporter();
 
   const timestamp = new Date().toISOString();
+  const savedFile = saveEmailLog(recipient, subject, html, text, transporter ? 'Live SMTP' : 'Simulated mode: SMTP_USER/SMTP_PASS not provided');
 
   if (transporter) {
     try {
@@ -55,31 +142,31 @@ export async function sendEmail({ to, subject, html, text }) {
         recipient,
         subject,
         messageId: info.messageId,
+        previewFile: savedFile,
         sentAt: timestamp
       };
     } catch (err) {
       console.error(`[EMAIL ERROR] Gagal mengirim email ke ${recipient}:`, err.message);
-      // Fallback to logged simulation if SMTP fails
-      saveEmailLog(recipient, subject, html, text, err.message);
       return {
         success: false,
         mode: 'failed_smtp',
         recipient,
         error: err.message,
+        previewFile: savedFile,
         sentAt: timestamp
       };
     }
   }
 
   // Simulated delivery mode (SMTP not yet supplied in env)
-  saveEmailLog(recipient, subject, html, text, 'Simulated mode: SMTP_USER/SMTP_PASS not provided');
   console.log(`[EMAIL SIMULATED] Laporan otomatis disimulasikan terkirim ke: ${recipient}`);
   return {
     success: true,
     mode: 'simulated',
     recipient,
     subject,
-    note: 'SMTP belum dikonfigurasi di backend/.env. Email disimpan di logs/sent-emails.',
+    previewFile: savedFile,
+    note: 'SMTP belum dikonfigurasi. Isi App Password Gmail Pengirim agar email masuk ke inbox Gmail nyata.',
     sentAt: timestamp
   };
 }
@@ -90,8 +177,23 @@ function saveEmailLog(recipient, subject, html, text, note) {
     const filepath = path.join(EMAIL_LOGS_DIR, filename);
     const logContent = `<!-- To: ${recipient} | Subject: ${subject} | Note: ${note} -->\n${html}`;
     fs.writeFileSync(filepath, logContent, 'utf8');
+    return filename;
   } catch (err) {
     console.error('Failed to save email log:', err.message);
+    return null;
+  }
+}
+
+export function getLatestEmailLogHtml() {
+  try {
+    const files = fs.readdirSync(EMAIL_LOGS_DIR)
+      .filter(f => f.endsWith('.html'))
+      .sort()
+      .reverse();
+    if (!files.length) return null;
+    return fs.readFileSync(path.join(EMAIL_LOGS_DIR, files[0]), 'utf8');
+  } catch {
+    return null;
   }
 }
 
@@ -387,3 +489,4 @@ export async function sendTestEmail(targetEmail = DEFAULT_REPORT_EMAIL) {
 
   return await sendEmail({ to: recipient, subject, html, text });
 }
+

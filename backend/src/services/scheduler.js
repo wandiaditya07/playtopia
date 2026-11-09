@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { pool } from '../db_mysql.js';
-import { sendDailySummaryEmail, DEFAULT_REPORT_EMAIL } from './mailer.js';
+import { sendDailySummaryEmail, getTargetEmail } from './mailer.js';
 
 let lastDailyReportSent = null;
 
@@ -71,8 +71,8 @@ export async function getDailyStats(targetDate = new Date()) {
   }
 }
 
-export async function triggerDailyEmailReport(targetEmail = DEFAULT_REPORT_EMAIL) {
-  const recipient = targetEmail || DEFAULT_REPORT_EMAIL;
+export async function triggerDailyEmailReport(targetEmail) {
+  const recipient = getTargetEmail(targetEmail);
   const now = new Date();
   const dateStr = now.toLocaleDateString('id-ID', { dateStyle: 'full' });
   const { stats, visitorsCount } = await getDailyStats(now);
@@ -100,5 +100,6 @@ export function initReportScheduler() {
     await triggerDailyEmailReport();
   });
 
-  console.log('⏰ Scheduler Laporan Otomatis via Email AKTIF: Setiap hari pk 22:00 WIB -> ' + DEFAULT_REPORT_EMAIL);
+  console.log('⏰ Scheduler Laporan Otomatis via Email AKTIF: Setiap hari pk 22:00 WIB -> ' + getTargetEmail());
 }
+

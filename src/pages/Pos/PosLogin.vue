@@ -28,23 +28,6 @@
         <h2 class="login-title">Welcome Back</h2>
         <p class="login-subtitle">Sign in to your account to continue</p>
 
-        <!-- Quick Demo Switcher -->
-        <div class="demo-pills-row mb-3">
-          <div class="demo-label mb-1">Pilih Akun Demo:</div>
-          <div class="d-flex gap-2">
-            <button
-              v-for="r in demoRoles"
-              :key="r.email"
-              type="button"
-              class="demo-pill-btn"
-              :class="{ 'active': email === r.email }"
-              @click="selectDemoRole(r)"
-            >
-              {{ r.title }}
-            </button>
-          </div>
-        </div>
-
         <!-- Notice (expired / unauthorized) -->
         <div
           v-if="notice"
@@ -402,45 +385,7 @@ async function submit() {
 .login-subtitle {
   font-size: 14px;
   color: #64748b;
-  margin: 0 0 16px 0;
-}
-
-.demo-pills-row {
-  margin-bottom: 20px;
-}
-
-.demo-label {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.demo-pill-btn {
-  flex: 1;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #475569;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.demo-pill-btn:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-
-.demo-pill-btn.active {
-  background: #0284c7;
-  border-color: #0284c7;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  margin: 0 0 24px 0;
 }
 
 /* Notices */
