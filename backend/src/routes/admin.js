@@ -524,14 +524,37 @@ router.put('/products/:id', requireRole('Admin', 'Client'), async (req, res) => 
 router.get('/members-promo', async (req, res) => {
   try {
     const [members] = await pool.query(`
-      SELECT m.*, m.name AS full_name, m.balance AS wallet_balance, mc.card_uid, mc.status AS card_status
+      SELECT m.*, m.name AS full_name, m.balance AS wallet_balance,
+             mc.card_uid, mc.status AS card_status,
+             COALESCE(p.name, 'Reguler') AS tier_name,
+             COALESCE(p.discount_percent, 10) AS discount_percent
       FROM members m
       LEFT JOIN member_cards mc ON mc.member_id = m.id AND mc.status = 'active'
+      LEFT JOIN membership_plans p ON m.plan_id = p.id
       ORDER BY m.id DESC
     `);
-    const [plans] = await pool.query('SELECT *, valid_days AS duration_days FROM membership_plans ORDER BY price ASC');
+    const [cards] = await pool.query(`
+      SELECT mc.id, mc.member_id, mc.card_uid, mc.status, mc.issued_at, mc.blocked_at, mc.created_at,
+             m.member_code, m.name AS member_name, m.phone AS member_phone, m.balance AS wallet_balance,
+             COALESCE(p.name, 'Reguler') AS plan_name, COALESCE(p.discount_percent, 10) AS discount_percent
+      FROM member_cards mc
+      LEFT JOIN members m ON mc.member_id = m.id
+      LEFT JOIN membership_plans p ON m.plan_id = p.id
+      ORDER BY mc.id DESC
+    `);
+    const [plans] = await pool.query(`
+      SELECT *, valid_days AS duration_days,
+        CASE
+          WHEN valid_days >= 365 THEN 'Sepuasnya (VIP)'
+          WHEN valid_days >= 90 THEN '5x Masuk'
+          WHEN valid_days >= 30 THEN '2x Masuk'
+          ELSE '1x Masuk'
+        END AS included_entries_label
+      FROM membership_plans
+      ORDER BY price ASC
+    `);
     const [vouchers] = await pool.query('SELECT *, min_purchase AS min_order_amount, usage_limit AS quota FROM vouchers ORDER BY id DESC');
-    res.json({ success: true, data: { members, plans, vouchers } });
+    res.json({ success: true, data: { members, cards, plans, vouchers } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -555,14 +578,14 @@ router.post('/members', async (req, res) => {
     const [mInfo] = await conn.query(
       `INSERT INTO members (member_code, name, phone, email, registered_outlet_id, balance, status, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
-      [code, name, phone, email, req.user.outlet_id || 1, initialBalance]
+      [code, name, phone, email, req.user?.outlet_id || 1, initialBalance]
     );
 
     if (cardUid) {
       await conn.query(
-        `INSERT INTO member_cards (member_id, card_uid, status, issued_at, created_at)
-         VALUES (?, ?, 'active', NOW(), NOW())`,
-        [mInfo.insertId, cardUid]
+        `INSERT INTO member_cards (member_id, card_uid, status, issued_at, created_at, active_member_id)
+         VALUES (?, ?, 'active', NOW(), NOW(), ?)`,
+        [mInfo.insertId, cardUid, mInfo.insertId]
       );
     }
     await conn.commit();
@@ -590,6 +613,125 @@ router.post('/members/:id/topup', async (req, res) => {
       message: `Top-up saldo Rp ${amount.toLocaleString('id-ID')} berhasil ditambahkan!`,
       data: { new_balance: mRows[0]?.balance || amount }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Member Card Status Toggle (Active / Blocked)
+router.put('/member-cards/:id/status', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const targetStatus = req.body?.status === 'blocked' ? 'blocked' : 'active';
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: 'ID kartu tidak valid.' });
+    }
+    await pool.query(
+      `UPDATE member_cards 
+       SET status = ?, blocked_at = IF(? = 'blocked', NOW(), NULL) 
+       WHERE id = ?`,
+      [targetStatus, targetStatus, id]
+    );
+    await logAudit(req, 'UPDATE_CARD_STATUS', 'member_cards', id, { status: targetStatus });
+    res.json({
+      success: true,
+      message: targetStatus === 'blocked' ? 'Kartu RFID berhasil diblokir.' : 'Kartu RFID berhasil diaktifkan kembali.'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Issue / Link RFID Card to Member
+router.post('/member-cards', async (req, res) => {
+  try {
+    const memberId = Number(req.body?.member_id);
+    const cardUid = String(req.body?.card_uid || '').trim();
+    if (!memberId || !cardUid) {
+      return res.status(400).json({ success: false, message: 'Member dan UID kartu RFID wajib diisi.' });
+    }
+    const [existing] = await pool.query(
+      'SELECT id, member_id, status FROM member_cards WHERE card_uid = ? AND status = "active"',
+      [cardUid]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `UID Kartu ${cardUid} sudah aktif digunakan oleh member ID #${existing[0].member_id}.`
+      });
+    }
+    const [info] = await pool.query(
+      `INSERT INTO member_cards (member_id, card_uid, status, issued_at, created_at, active_member_id)
+       VALUES (?, ?, 'active', NOW(), NOW(), ?)`,
+      [memberId, cardUid, memberId]
+    );
+    await logAudit(req, 'ISSUE_MEMBER_CARD', 'member_cards', info.insertId, { memberId, cardUid });
+    res.status(201).json({ success: true, message: 'Kartu RFID berhasil dihubungkan ke member!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Membership Plans CRUD
+router.post('/membership-plans', async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const price = Number(req.body?.price);
+    const discountPercent = Math.min(100, Math.max(0, Number(req.body?.discount_percent) || 0));
+    const validDays = Math.max(1, Number(req.body?.valid_days) || 30);
+    const isActive = req.body?.is_active === false || req.body?.is_active === 0 ? 0 : 1;
+
+    if (!name || !Number.isFinite(price) || price < 0) {
+      return res.status(400).json({ success: false, message: 'Nama dan harga paket membership wajib diisi dengan benar.' });
+    }
+
+    const [info] = await pool.query(
+      `INSERT INTO membership_plans (name, price, discount_percent, valid_days, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+      [name, price, discountPercent, validDays, isActive]
+    );
+    await logAudit(req, 'CREATE_MEMBERSHIP_PLAN', 'membership_plans', info.insertId, { name, price, validDays });
+    res.status(201).json({ success: true, message: 'Paket membership berhasil ditambahkan!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/membership-plans/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const name = String(req.body?.name || '').trim();
+    const price = Number(req.body?.price);
+    const discountPercent = Math.min(100, Math.max(0, Number(req.body?.discount_percent) || 0));
+    const validDays = Math.max(1, Number(req.body?.valid_days) || 30);
+    const isActive = req.body?.is_active === false || req.body?.is_active === 0 ? 0 : 1;
+
+    if (!Number.isInteger(id) || !name || !Number.isFinite(price) || price < 0) {
+      return res.status(400).json({ success: false, message: 'Data paket membership tidak lengkap/valid.' });
+    }
+
+    await pool.query(
+      `UPDATE membership_plans
+       SET name = ?, price = ?, discount_percent = ?, valid_days = ?, is_active = ?, updated_at = NOW()
+       WHERE id = ?`,
+      [name, price, discountPercent, validDays, isActive, id]
+    );
+    await logAudit(req, 'UPDATE_MEMBERSHIP_PLAN', 'membership_plans', id, { name, price, validDays, isActive });
+    res.json({ success: true, message: 'Paket membership berhasil diperbarui!' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.delete('/membership-plans/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ success: false, message: 'ID paket membership tidak valid.' });
+    }
+    await pool.query('DELETE FROM membership_plans WHERE id = ?', [id]);
+    await logAudit(req, 'DELETE_MEMBERSHIP_PLAN', 'membership_plans', id);
+    res.json({ success: true, message: 'Paket membership berhasil dihapus!' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

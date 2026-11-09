@@ -605,7 +605,20 @@
             Terima kasih &amp; selamat bermain!
           </div>
         </div>
-        <div class="card-footer text-end">
+        <div class="card-footer text-end d-flex justify-content-end gap-2 d-print-none">
+          <button
+            type="button"
+            class="btn btn-outline-secondary d-flex align-items-center gap-1"
+            title="Cetak struk ke printer thermal (58mm/80mm) atau simpan PDF"
+            @click="printReceipt"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            <span>Cetak Struk</span>
+          </button>
           <button
             type="button"
             class="btn btn-primary"
@@ -896,6 +909,10 @@ function openCustomerDisplay() {
   setTimeout(broadcastCart, 800)
 }
 
+function printReceipt() {
+  window.print()
+}
+
 watch([cart, member, paymentMethod, showPayment], broadcastCart, { deep: true })
 
 onMounted(() => {
@@ -981,5 +998,30 @@ onUnmounted(() => {
 .pos-dialog-sm {
   max-width: 420px;
   border-radius: 16px;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .pos-backdrop,
+  .pos-dialog,
+  .pos-dialog * {
+    visibility: visible;
+  }
+  .pos-backdrop {
+    position: absolute;
+    inset: 0;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .pos-dialog {
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .d-print-none {
+    display: none !important;
+  }
 }
 </style>
