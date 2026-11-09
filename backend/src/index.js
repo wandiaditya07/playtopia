@@ -11,6 +11,8 @@ import membersRouter from './routes/members.js';
 import shiftsRouter from './routes/shifts.js';
 import simulatorRouter from './routes/simulator.js';
 import adminRouter from './routes/admin.js';
+import reportsRouter from './routes/reports.js';
+import { initReportScheduler } from './services/scheduler.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -38,6 +40,7 @@ app.use('/api/v1/members', requireAuth, membersRouter);
 app.use('/api/v1/shifts', requireAuth, shiftsRouter);
 app.use('/api/v1/simulator', requireAuth, simulatorRouter);
 app.use('/api/v1/admin', requireAuth, adminRouter);
+app.use('/api/v1/reports', requireAuth, reportsRouter);
 
 // 404 Handler
 app.use('/api', (req, res) => {
@@ -47,4 +50,5 @@ app.use('/api', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 POS Backend READY di http://localhost:${PORT}`);
   console.log(`🔐 Auth: POST /api/v1/auth/login | Gate: POST /api/v1/gate/verify-access`);
+  initReportScheduler();
 });

@@ -54,6 +54,7 @@ const DEFAULT_MENUS = [
   [25, 7, 'sales_report', 'Laporan Penjualan', 'bi-graph-up-arrow', '/reports/sales', 1, 0, 1],
   [26, 7, 'item_report', 'Laporan per Item', 'bi-pie-chart', '/reports/items', 2, 0, 1],
   [27, 7, 'closing', 'Rekap Closing Harian', 'bi-file-earmark-check', '/closing', 3, 0, 1],
+  [34, 7, 'report_schedules', 'Laporan via Email', 'bi-envelope-check', '/reports/schedules', 4, 0, 1],
   // Children of grp_system (8)
   [28, 8, 'roles', 'Role & Hak Akses Menu', 'bi-shield-lock', '/system/roles', 1, 0, 1],
   [29, 8, 'menus', 'Struktur Grup Menu', 'bi-list-nested', '/system/menus', 2, 0, 1],

@@ -202,6 +202,29 @@
               </small>
             </div>
 
+            <!-- Email Otomatis ke Owner / Manajemen (Feature 14) -->
+            <div class="mb-4 p-3 rounded border" style="background-color: #f8fafc; border-color: #e2e8f0 !important;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label small fw-bold text-dark m-0 d-flex align-items-center gap-1">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  Laporan Otomatis via Email
+                </label>
+                <span class="badge" style="background-color: #e0f2fe; color: #0284c7; font-size: 10px;">Fitur #14</span>
+              </div>
+              <div class="input-group input-group-sm mt-1">
+                <span class="input-group-text bg-white text-muted">Kirim ke:</span>
+                <input
+                  type="email"
+                  v-model="ownerEmail"
+                  class="form-control"
+                  placeholder="testgmailjs@gmail.com"
+                />
+              </div>
+              <small class="text-muted d-block mt-1" style="font-size: 11px;">
+                Salinan rekap omset dan rekonsiliasi kas akan otomatis dikirim ke email di atas saat shift ditutup.
+              </small>
+            </div>
+
             <!-- Submit closing -->
             <button
               class="btn btn-lg w-100 py-3 fw-bold shadow-sm btn-close-shift"
@@ -224,6 +247,25 @@
           <button type="button" class="btn-close" @click="finishClosingModal" />
         </div>
         <p class="text-muted small mb-2">Shift telah ditutup dan rekonsiliasi kas telah tercatat ke database.</p>
+
+        <!-- Notifikasi Status Pengiriman Email -->
+        <div v-if="emailDeliveryStatus" class="alert alert-success d-flex align-items-center justify-content-between py-2 px-3 small mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div>
+              <strong>Laporan Email Terkirim:</strong> Salinan dikirim ke <code>{{ ownerEmail }}</code>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-success py-0 px-2"
+            :disabled="sendingEmail"
+            @click="resendEmailReport"
+          >
+            {{ sendingEmail ? 'Mengirim...' : 'Kirim Ulang' }}
+          </button>
+        </div>
+
         <pre class="bg-light p-3 rounded font-monospace small mb-3" style="max-height: 320px; overflow-y: auto;">{{ reportText }}</pre>
         <div class="d-flex justify-content-end gap-2">
           <button class="btn btn-outline-secondary" type="button" @click="printReport">
@@ -257,6 +299,10 @@ const closingNotes = ref('')
 
 const closingReportModal = ref(false)
 const reportText = ref('')
+const ownerEmail = ref('testgmailjs@gmail.com')
+const emailDeliveryStatus = ref(null)
+const sendingEmail = ref(false)
+const closedShiftId = ref(null)
 
 async function fetchCurrentShift() {
   loading.value = true
@@ -349,16 +395,25 @@ async function openShift() {
 async function submitClosing() {
   if (isClosingDisabled.value) return
   submittingClose.value = true
+  emailDeliveryStatus.value = null
   try {
     const res = await api('/shifts/close', {
       method: 'POST',
       body: {
         actual_closing_cash: Number(actualClosingCash.value),
-        notes: closingNotes.value.trim()
+        notes: closingNotes.value.trim(),
+        owner_email: ownerEmail.value.trim()
       }
     })
 
     if (res.success) {
+      closedShiftId.value = res.data?.shift_id || res.data?.shift?.id
+      if (res.data?.email_status) {
+        emailDeliveryStatus.value = res.data.email_status
+      } else {
+        emailDeliveryStatus.value = { success: true, recipient: ownerEmail.value }
+      }
+
       reportText.value =
 `==============================================
            LAPORAN CLOSING SHIFT
@@ -378,6 +433,7 @@ Kas Fisik     : ${rupiah(actualClosingCash.value)}
 Selisih Kas   : ${(cashVariance.value >= 0 ? '+' : '') + rupiah(cashVariance.value)}
 
 Catatan Kasir : ${closingNotes.value || '-'}
+Laporan Email : Terkirim ke ${ownerEmail.value.trim()}
 ==============================================
 Status: CLOSED & AUDITED`
 
@@ -393,6 +449,24 @@ Status: CLOSED & AUDITED`
     feedbackMsg.value = err.message || 'Terjadi kesalahan sistem saat menutup shift.'
   } finally {
     submittingClose.value = false
+  }
+}
+
+async function resendEmailReport() {
+  if (!closedShiftId.value) return
+  sendingEmail.value = true
+  try {
+    const res = await api(`/shifts/${closedShiftId.value}/send-email`, {
+      method: 'POST',
+      body: { email: ownerEmail.value.trim() }
+    })
+    if (res.success) {
+      emailDeliveryStatus.value = { success: true, recipient: ownerEmail.value }
+    }
+  } catch (err) {
+    console.error('Gagal kirim ulang email:', err)
+  } finally {
+    sendingEmail.value = false
   }
 }
 

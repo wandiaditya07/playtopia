@@ -158,6 +158,16 @@ const DEFAULT_GROUPS = [
       { code: 'tickets', label: 'Monitoring Pengunjung', path: '/app/visitors' },
       { code: 'access_logs', label: 'Riwayat Scan Gate', path: '/app/access/logs' }
     ]
+  },
+  {
+    code: 'grp_reports',
+    label: 'Laporan',
+    is_group: true,
+    items: [
+      { code: 'sales_report', label: 'Laporan Penjualan', path: '/app/reports/sales' },
+      { code: 'item_report', label: 'Penjualan per Item', path: '/app/reports/items' },
+      { code: 'report_schedules', label: 'Laporan via Email', path: '/app/reports/schedules' }
+    ]
   }
 ]
 
@@ -212,7 +222,7 @@ function itemLabelId(code, fallback) {
     sales_report: 'Laporan Penjualan',
     item_report: 'Penjualan per Item',
     closing: 'Rekap Closing',
-    report_schedules: 'Jadwal Laporan',
+    report_schedules: 'Laporan via Email',
     backups: 'Backup Database',
     outlets: 'Cabang Outlet',
     users: 'Manajemen Pengguna',
@@ -245,6 +255,7 @@ const ICONS = {
   business_units: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
   sales_report: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
   item_report: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>',
+  report_schedules: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
   closing: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
   outlets: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
   users: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>',

@@ -1,5 +1,6 @@
 import express from 'express';
 import { pool } from '../db_mysql.js';
+import { sendShiftClosingEmail, DEFAULT_REPORT_EMAIL } from '../services/mailer.js';
 
 const router = express.Router();
 
@@ -181,6 +182,23 @@ Selisih          : ${rp(variance)} ${variance === 0 ? '(PAS)' : variance > 0 ? '
 Catatan: ${notes || '-'}
     `.trim();
 
+    const targetRecipient = ownerEmail || DEFAULT_REPORT_EMAIL;
+    let emailStatus = null;
+    try {
+      emailStatus = await sendShiftClosingEmail({
+        shift,
+        stats,
+        expected,
+        counted,
+        variance,
+        notes,
+        user: req.user
+      }, targetRecipient);
+    } catch (mailErr) {
+      console.error('Error dispatching closing shift email:', mailErr.message);
+      emailStatus = { success: false, error: mailErr.message };
+    }
+
     res.json({
       success: true,
       message: 'Closing shift berhasil disimpan.',
@@ -192,9 +210,42 @@ Catatan: ${notes || '-'}
         expected_cash: expected,
         actual_cash: counted,
         cash_variance: variance,
-        report_email: report
+        report_email: report,
+        email_status: emailStatus
       }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Resend shift closing report to email
+router.post('/:id/send-email', async (req, res) => {
+  try {
+    const shiftId = Number(req.params.id);
+    const targetEmail = String(req.body?.email || '').trim() || DEFAULT_REPORT_EMAIL;
+
+    const [shifts] = await pool.query('SELECT * FROM shifts WHERE id = ?', [shiftId]);
+    if (shifts.length === 0) {
+      return res.status(404).json({ success: false, message: 'Shift tidak ditemukan' });
+    }
+    const shift = shifts[0];
+    const stats = await getShiftStats(shift.id);
+    const expected = shift.expected_cash || (shift.opening_cash + stats.cash_total);
+    const counted = shift.counted_cash || 0;
+    const variance = counted - expected;
+
+    const result = await sendShiftClosingEmail({
+      shift,
+      stats,
+      expected,
+      counted,
+      variance,
+      notes: shift.notes,
+      user: { name: shift.cashier_name || 'Kasir', role: 'Staff' }
+    }, targetEmail);
+
+    res.json({ success: true, message: `Laporan shift #${shiftId} dikirim ke ${targetEmail}`, data: result });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

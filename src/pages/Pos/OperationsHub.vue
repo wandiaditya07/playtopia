@@ -373,7 +373,7 @@
     </div>
 
     <!-- 7. AUDIT LOGS -->
-    <div v-else class="pt-panel">
+    <div v-else-if="section === 'audit'" class="pt-panel">
       <div class="pt-panel-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold text-dark">Log Audit Aktivitas</span>
         <span class="pt-tag">{{ sysData.audit_logs.length }} Catatan</span>
@@ -402,6 +402,133 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- 8. JADWAL & LAPORAN OTOMATIS VIA EMAIL (Feature 14) -->
+    <div v-else-if="section === 'schedules'" class="row g-3">
+      <div class="col-lg-6">
+        <div class="pt-panel h-100">
+          <div class="pt-panel-header d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+              <span class="fw-semibold text-dark">Konfigurasi Laporan Otomatis via Email</span>
+              <span class="badge" style="background-color: #e0f2fe; color: #0284c7; font-size: 11px;">Fitur #14</span>
+            </div>
+            <span class="pt-tag" :class="emailConfig.smtp_configured ? 'text-success' : 'text-primary'">
+              {{ emailConfig.smtp_configured ? 'SMTP Aktif' : 'Engine Aktif (Simulasi/Log)' }}
+            </span>
+          </div>
+          <div class="p-3">
+            <div class="alert alert-info py-2 px-3 small mb-3">
+              <strong>Otomatisasi Laporan Aktif:</strong> Laporan operasional dikirim otomatis setiap malam pukul <strong>22:00 WIB</strong> dan setiap kali kasir melakukan <strong>Tutup Shift (Closing)</strong>.
+            </div>
+
+            <!-- Target Email Input -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold text-secondary mb-1" style="font-size: 12px;">Alamat Email Penerima Laporan (Owner / Manajemen)</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white text-muted">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </span>
+                <input
+                  v-model.trim="emailTarget"
+                  type="email"
+                  class="form-control font-monospace"
+                  placeholder="testgmailjs@gmail.com"
+                />
+              </div>
+              <small class="text-muted d-block mt-1" style="font-size: 11px;">
+                Semua rekap harian dan notifikasi selisih kas closing dikirim ke alamat ini.
+              </small>
+            </div>
+
+            <!-- Jadwal Info -->
+            <div class="p-3 rounded border bg-light mb-3" style="font-size: 12.5px;">
+              <div class="d-flex justify-content-between py-1 border-bottom">
+                <span class="text-muted">Jadwal Rekap Harian:</span>
+                <strong class="text-dark">Setiap Hari pk 22:00 WIB</strong>
+              </div>
+              <div class="d-flex justify-content-between py-1 border-bottom">
+                <span class="text-muted">Laporan Closing Shift:</span>
+                <strong class="text-success">Otomatis saat Kasir Tutup Shift</strong>
+              </div>
+              <div class="d-flex justify-content-between py-1">
+                <span class="text-muted">Pengiriman Terakhir:</span>
+                <span class="text-dark">{{ emailConfig.last_sent_at ? fmtDateTime(emailConfig.last_sent_at) : 'Belum pernah dipicu' }}</span>
+              </div>
+            </div>
+
+            <!-- Feedback Alert -->
+            <div v-if="emailFeedback" class="alert py-2 px-3 small mb-3" :class="emailFeedback.type === 'success' ? 'alert-success' : 'alert-danger'">
+              {{ emailFeedback.text }}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="pt-btn-primary d-flex align-items-center gap-1"
+                :disabled="sendingEmail"
+                @click="sendDailyReportNow"
+              >
+                <span v-if="sendingEmail" class="spinner-border spinner-border-sm me-1" />
+                <span>Kirim Laporan Harian Sekarang</span>
+              </button>
+              <button
+                type="button"
+                class="pt-btn-outline d-flex align-items-center gap-1"
+                :disabled="sendingEmail"
+                @click="sendTestEmailNow"
+              >
+                <span>Kirim Tes Verifikasi Email</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="pt-panel h-100">
+          <div class="pt-panel-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold text-dark">Pratinjau Data Rekap Harian Hari Ini</span>
+            <span class="pt-tag">Live Today</span>
+          </div>
+          <div class="p-3">
+            <div class="row g-2 mb-3">
+              <div class="col-4">
+                <div class="p-2 rounded bg-light border text-center">
+                  <div class="text-muted small" style="font-size: 11px;">Total Omset</div>
+                  <strong class="text-primary d-block mt-1" style="font-size: 14px;">{{ rupiah(dailyPreview?.stats?.total_revenue || 0) }}</strong>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-2 rounded bg-light border text-center">
+                  <div class="text-muted small" style="font-size: 11px;">Playground</div>
+                  <strong class="text-dark d-block mt-1" style="font-size: 14px;">{{ rupiah(dailyPreview?.stats?.playground_sales || 0) }}</strong>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="p-2 rounded bg-light border text-center">
+                  <div class="text-muted small" style="font-size: 11px;">Cafe &amp; Snack</div>
+                  <strong class="text-dark d-block mt-1" style="font-size: 14px;">{{ rupiah(dailyPreview?.stats?.cafe_sales || 0) }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="border rounded p-3 bg-light font-monospace small" style="font-size: 12px; line-height: 1.6;">
+              <div class="fw-bold text-dark border-bottom pb-1 mb-2">FORMAT EMAIL YANG AKAN DITERIMA:</div>
+              <div>Subjek: [Playtopia POS] Rekap Harian Otomatis - {{ new Date().toLocaleDateString('id-ID') }}</div>
+              <div>Penerima: {{ emailTarget }}</div>
+              <div>----------------------------------------</div>
+              <div>- Total Transaksi: {{ dailyPreview?.stats?.total_transactions || 0 }} Trx</div>
+              <div>- Total Pengunjung: {{ dailyPreview?.visitorsCount || 0 }} Orang</div>
+              <div>- Omset Playground: {{ rupiah(dailyPreview?.stats?.playground_sales || 0) }}</div>
+              <div>- Omset Cafe &amp; F&amp;B: {{ rupiah(dailyPreview?.stats?.cafe_sales || 0) }}</div>
+              <div>- Tunai: {{ rupiah(dailyPreview?.stats?.cash_total || 0) }}</div>
+              <div>- Non-Tunai (QRIS/EDC/Member): {{ rupiah((dailyPreview?.stats?.qris_total || 0) + (dailyPreview?.stats?.debit_total || 0) + (dailyPreview?.stats?.member_balance_total || 0)) }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -469,6 +596,7 @@ const section = computed(() => {
   if (p.includes('/gates')) return 'gates'
   if (p.includes('/bookings')) return 'bookings'
   if (p.includes('/registrations')) return 'registrations'
+  if (p.includes('/reports/schedules')) return 'schedules'
   if (p.includes('/reports/items')) return 'items'
   if (p.includes('/reports/visitors')) return 'visitors_report'
   if (p.includes('/reports/sales')) return 'sales'
@@ -487,6 +615,7 @@ const currentTitle = computed(() => {
     bookings: 'Booking Rombongan',
     registrations: 'Registrasi Tiket Online',
     sales: 'Laporan Penjualan',
+    schedules: 'Laporan Otomatis via Email (Fitur #14)',
     items: 'Penjualan per Produk & Paket',
     visitors_report: 'Laporan Kunjungan',
     outlets: 'Cabang Outlet',
@@ -505,6 +634,7 @@ const currentSubtitle = computed(() => {
     bookings: 'Manajemen jadwal reservasi grup, sekolah, dan acara ulang tahun',
     registrations: 'Daftar pemesanan dan registrasi tiket kunjungan secara daring',
     sales: 'Ringkasan transaksi penjualan harian dan rekapitulasi shift',
+    schedules: 'Konfigurasi otomatisasi pengiriman rekap penjualan harian dan closing shift ke email owner/manajemen',
     items: 'Performa penjualan berdasarkan masing-masing paket tiket dan produk',
     visitors_report: 'Rekapitulasi trafik kunjungan dan durasi bermain pengunjung',
     outlets: 'Informasi lokasi dan jam operasional cabang Playtopia',
@@ -743,7 +873,99 @@ function handleExport() {
   }
 }
 
-onMounted(loadAll)
+const emailTarget = ref('testgmailjs@gmail.com')
+const sendingEmail = ref(false)
+const emailFeedback = ref(null)
+const emailConfig = reactive({
+  target_email: 'testgmailjs@gmail.com',
+  schedule_time: '22:00 WIB (Harian Otomatis)',
+  on_shift_close: true,
+  smtp_configured: false,
+  last_sent_at: null
+})
+const dailyPreview = ref(null)
+
+async function loadEmailConfig() {
+  try {
+    const [cfgRes, previewRes] = await Promise.all([
+      api('/reports/email-config').catch(() => ({})),
+      api('/reports/daily-stats').catch(() => ({}))
+    ])
+    if (cfgRes?.success && cfgRes.data) {
+      Object.assign(emailConfig, cfgRes.data)
+      if (cfgRes.data.target_email) emailTarget.value = cfgRes.data.target_email
+    }
+    if (previewRes?.success && previewRes.data) {
+      dailyPreview.value = previewRes.data
+    }
+  } catch (err) {
+    console.warn('Error loading email config:', err)
+  }
+}
+
+async function sendDailyReportNow() {
+  sendingEmail.value = true
+  emailFeedback.value = null
+  try {
+    const res = await api('/reports/send-daily', {
+      method: 'POST',
+      body: { email: emailTarget.value.trim() }
+    })
+    if (res.success) {
+      emailFeedback.value = {
+        type: 'success',
+        text: `✓ Laporan rekap harian berhasil dikirim ke: ${emailTarget.value.trim()}`
+      }
+      emailConfig.last_sent_at = new Date().toISOString()
+    } else {
+      emailFeedback.value = {
+        type: 'danger',
+        text: res.message || 'Gagal mengirim laporan harian.'
+      }
+    }
+  } catch (err) {
+    emailFeedback.value = {
+      type: 'danger',
+      text: err.message || 'Terjadi kesalahan saat memicu pengiriman laporan.'
+    }
+  } finally {
+    sendingEmail.value = false
+  }
+}
+
+async function sendTestEmailNow() {
+  sendingEmail.value = true
+  emailFeedback.value = null
+  try {
+    const res = await api('/reports/test-email', {
+      method: 'POST',
+      body: { email: emailTarget.value.trim() }
+    })
+    if (res.success) {
+      emailFeedback.value = {
+        type: 'success',
+        text: `✓ Email uji coba (test verification) berhasil dikirim ke: ${emailTarget.value.trim()}`
+      }
+    } else {
+      emailFeedback.value = {
+        type: 'danger',
+        text: res.message || 'Gagal mengirim email uji coba.'
+      }
+    }
+  } catch (err) {
+    emailFeedback.value = {
+      type: 'danger',
+      text: err.message || 'Gagal mengirim email uji coba.'
+    }
+  } finally {
+    sendingEmail.value = false
+  }
+}
+
+onMounted(() => {
+  loadAll()
+  loadEmailConfig()
+})
 </script>
 
 <style scoped>
