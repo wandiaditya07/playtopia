@@ -98,9 +98,9 @@ Layar ini akan otomatis menerima pembaruan keranjang belanja dan QRIS secara rea
 
 | Role | Email | Password | Hak Akses |
 |---|---|---|---|
-| **Owner (Client)** | `owner@playtopia.id` | `password` | Akses penuh eksekutif, rekap omset, dan laporan audit |
-| **Administrator** | `admin@playtopia.id` | `password` | Manajemen RBAC, pengguna, unit bisnis, katalog, dan member |
-| **Kasir (Staff)** | `kasir@playtopia.id` | `password` | Transaksi POS, verifikasi tiket, top-up member, dan tutup shift |
+| **Owner (Client)** | `owner@playtopia.id` | `owner123` | Akses penuh eksekutif, rekap omset, dan laporan audit |
+| **Administrator** | `admin@playtopia.id` | `admin123` | Manajemen RBAC, pengguna, unit bisnis, katalog, dan member |
+| **Kasir (Staff)** | `kasir@playtopia.id` | `kasir123` | Transaksi POS, verifikasi tiket, top-up member, dan tutup shift |
 
 ---
 
