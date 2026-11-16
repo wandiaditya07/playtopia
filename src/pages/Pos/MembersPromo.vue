@@ -101,9 +101,9 @@
         </div>
         <div class="col-md-4">
           <div class="pt-metric-card">
-            <div class="text-muted small">Kartu RFID Terhubung</div>
+            <div class="text-muted small">Kartu Member (Sistem Swipe)</div>
             <div class="fs-4 fw-bold text-dark mt-1">{{ linkedCardsCount }} Kartu</div>
-            <div class="pt-metric-hint text-info">Siap tap transaksi &amp; turnstile gate</div>
+            <div class="pt-metric-hint text-info">Sistem Swipe &middot; Diskon Tiket 20% &amp; Cafe 10% (3 Bulan)</div>
           </div>
         </div>
         <div class="col-md-4">
@@ -152,10 +152,11 @@
             <thead>
               <tr>
                 <th>Kode Member</th>
-                <th>Nama Lengkap</th>
+                <th>Nama Lengkap (Wali)</th>
                 <th>Kontak</th>
-                <th>UID Kartu RFID</th>
-                <th>Tier &amp; Benefit</th>
+                <th>Daftar Anak &amp; Umur</th>
+                <th>No. Kartu Swipe</th>
+                <th>Benefit &amp; Masa Berlaku (3 Bln)</th>
                 <th>Status</th>
                 <th>Saldo Wallet</th>
                 <th class="text-end">Tindakan</th>
@@ -163,7 +164,7 @@
             </thead>
             <tbody>
               <tr v-if="filteredMembers.length === 0">
-                <td colspan="8" class="text-center text-muted py-4">Belum ada data member yang sesuai filter.</td>
+                <td colspan="9" class="text-center text-muted py-4">Belum ada data member yang sesuai filter.</td>
               </tr>
               <tr v-for="m in filteredMembers" :key="m.id">
                 <td class="font-monospace fw-semibold text-dark">{{ m.member_code }}</td>
@@ -176,13 +177,29 @@
                   <div v-if="m.email" class="text-muted" style="font-size: 11.5px;">{{ m.email }}</div>
                 </td>
                 <td>
+                  <div v-if="m.children && m.children.length > 0" class="d-flex flex-wrap gap-1">
+                    <span
+                      v-for="(ch, idx) in m.children"
+                      :key="idx"
+                      class="pt-tag"
+                      style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0;"
+                    >
+                      {{ ch.name }} ({{ ch.age }} Thn)
+                    </span>
+                  </div>
+                  <span v-else class="text-muted small fst-italic">Belum ada data anak</span>
+                </td>
+                <td>
                   <span v-if="m.card_uid" class="pt-tag font-monospace text-primary bg-primary-subtle border-primary-subtle">
                     {{ m.card_uid }}
                   </span>
                   <span v-else class="text-muted small fst-italic">Belum Terhubung</span>
                 </td>
                 <td>
-                  <span class="pt-dir-badge in">{{ m.tier || m.tier_name || 'REGULAR' }} ({{ Number(m.discount_percent || 10) }}%)</span>
+                  <span class="pt-dir-badge in">Tiket 20% &middot; Cafe 10%</span>
+                  <div class="text-muted mt-1" style="font-size: 11px;">
+                    Exp (3 Bln): <strong>{{ m.expires_on ? String(m.expires_on).slice(0, 10) : '90 Hari' }}</strong>
+                  </div>
                 </td>
                 <td>
                   <span class="pt-status-badge" :class="m.status === 'active' ? 'allowed' : 'blocked'">
@@ -191,14 +208,24 @@
                 </td>
                 <td class="fw-semibold text-dark">{{ rupiah(m.wallet_balance || 0) }}</td>
                 <td class="text-end">
-                  <button
-                    type="button"
-                    class="pt-btn-outline"
-                    style="padding: 5px 11px; font-size: 12px;"
-                    @click="openTopup(m)"
-                  >
-                    Top-Up Saldo
-                  </button>
+                  <div class="d-inline-flex gap-1">
+                    <button
+                      type="button"
+                      class="pt-btn-outline"
+                      style="padding: 5px 10px; font-size: 12px;"
+                      @click="openMemberChildrenModal(m)"
+                    >
+                      {{ m.children && m.children.length > 0 ? 'Kelola Anak' : '+ Tambah Anak' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="pt-btn-outline"
+                      style="padding: 5px 11px; font-size: 12px;"
+                      @click="openTopup(m)"
+                    >
+                      Top-Up Saldo
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -221,26 +248,22 @@
                     <rect x="2" y="5" width="20" height="14" rx="2" />
                     <line x1="2" y1="10" x2="22" y2="10" />
                   </svg>
-                  <span>TERMINAL TAP RFID</span>
+                  <span>TERMINAL SWIPE KARTU MEMBER</span>
                 </span>
                 <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">
-                  READER READY
+                  SWIPE READER READY
                 </span>
               </div>
 
               <!-- Physical Card Mockup Display -->
               <div class="pt-card-mockup mb-3" :class="{ 'pt-card-mockup-blocked': terminalCard && terminalCard.status === 'blocked' }">
                 <div class="d-flex justify-content-between align-items-center">
-                  <span class="pt-card-brand">PLAYTOPIA RFID</span>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                    <path d="M4 4a16 16 0 0 1 16 16" />
-                    <path d="M4 9a11 11 0 0 1 11 11" />
-                    <path d="M4 14a6 6 0 0 1 6 6" />
-                  </svg>
+                  <span class="pt-card-brand">PLAYTOPIA SWIPE CARD</span>
+                  <span class="badge bg-light text-dark font-monospace" style="font-size: 10px;">MAGNETIC SWIPE</span>
                 </div>
-                <div class="pt-card-chip my-2"></div>
+                <div class="my-2" style="height: 16px; background: rgba(15, 23, 42, 0.78); border-radius: 3px;"></div>
                 <div class="pt-card-uid font-monospace">
-                  {{ terminalCard ? terminalCard.card_uid : 'SCAN ATAU TAP KARTU...' }}
+                  {{ terminalCard ? terminalCard.card_uid : 'GESEK / SWIPE KARTU MEMBER...' }}
                 </div>
                 <div class="d-flex justify-content-between align-items-end mt-2">
                   <div>
@@ -257,7 +280,7 @@
               </div>
 
               <!-- Scan Input -->
-              <label class="form-label small fw-semibold text-muted">Input / Tap UID Kartu (Enter untuk membaca):</label>
+              <label class="form-label small fw-semibold text-muted">Swipe Kartu Member / Ketik Nomor Kartu (Enter untuk membaca):</label>
               <div class="input-group mb-2">
                 <span class="input-group-text bg-white">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -268,17 +291,17 @@
                   v-model.trim="terminalInputUid"
                   type="text"
                   class="form-control font-monospace"
-                  placeholder="Contoh: 3492817290..."
+                  placeholder="Swipe kartu di reader atau ketik UID..."
                   @keyup.enter="handleTerminalTap"
                 />
                 <button type="button" class="btn btn-outline-secondary" @click="handleTerminalTap">
-                  Baca Kartu
+                  Swipe Kartu
                 </button>
               </div>
 
               <!-- Quick Demo Tap Pills -->
               <div class="d-flex flex-wrap align-items-center gap-1 mt-2">
-                <span class="text-muted" style="font-size: 11px;">Kartu Cepat:</span>
+                <span class="text-muted" style="font-size: 11px;">Simulasi Swipe Cepat:</span>
                 <button
                   v-for="c in cards.slice(0, 3)"
                   :key="c.id"
@@ -287,13 +310,13 @@
                   style="font-size: 11px;"
                   @click="quickSelectCard(c)"
                 >
-                  {{ c.card_uid }} ({{ c.member_name }})
+                  💳 {{ c.card_uid }} ({{ c.member_name }})
                 </button>
               </div>
             </div>
 
             <div class="pt-2 border-top mt-3 text-muted" style="font-size: 11.5px;">
-              Mendukung semua perangkat RFID Contactless USB Reader &amp; Keyboard Wedge 13.56MHz Mifare / 125KHz EM.
+              Sistem Kartu Member Magnetic Swipe (Gesek) &bull; Diskon 20% Tiket Masuk &amp; 10% Menu Cafe &bull; Masa Berlaku 3 Bulan.
             </div>
           </div>
         </div>
@@ -595,9 +618,9 @@
             <tr v-for="v in vouchers" :key="v.id">
               <td><span class="pt-tag font-monospace">{{ v.code }}</span></td>
               <td class="fw-medium text-dark">{{ v.name }}</td>
-              <td>{{ v.discount_type === 'percentage' ? 'Persentase (%)' : 'Nominal (Rp)' }}</td>
+              <td>{{ (v.discount_type === 'percent' || v.discount_type === 'percentage') ? 'Persentase (%)' : 'Nominal (Rp)' }}</td>
               <td class="fw-semibold text-dark">
-                {{ v.discount_type === 'percentage' ? v.discount_value + '%' : rupiah(v.discount_value) }}
+                {{ (v.discount_type === 'percent' || v.discount_type === 'percentage') ? Number(v.discount_value) + '%' : rupiah(v.discount_value) }}
               </td>
               <td>{{ rupiah(v.min_order_amount) }}</td>
               <td>{{ v.used_count }} / {{ v.quota || 'Tanpa Batas' }}</td>
@@ -651,6 +674,52 @@
               <input v-model.number="memberForm.initial_balance" type="number" step="50000" class="form-control">
             </div>
           </div>
+
+          <!-- Daftar Anak Member -->
+          <div class="border-top pt-2 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label small fw-semibold m-0">Daftar Nama Anak &amp; Umur (Tampil di Kasir &amp; Timer)</label>
+              <button
+                type="button"
+                class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold"
+                style="font-size: 11.5px; border-radius: 99px;"
+                @click="memberForm.children.push({ name: '', age: 5 })"
+              >
+                + Tambah Anak
+              </button>
+            </div>
+            <div
+              v-for="(ch, idx) in memberForm.children"
+              :key="idx"
+              class="d-flex gap-2 align-items-center mb-2"
+            >
+              <input
+                v-model.trim="ch.name"
+                type="text"
+                class="form-control form-control-sm"
+                :placeholder="`Nama Anak #${idx + 1}`"
+              >
+              <div class="input-group input-group-sm" style="max-width: 110px;">
+                <input
+                  v-model.number="ch.age"
+                  type="number"
+                  min="1"
+                  max="17"
+                  class="form-control text-center"
+                >
+                <span class="input-group-text">Thn</span>
+              </div>
+              <button
+                v-if="memberForm.children.length > 1"
+                type="button"
+                class="btn btn-sm btn-outline-danger py-1 px-2"
+                @click="memberForm.children.splice(idx, 1)"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
           <div class="d-flex justify-content-end gap-2">
             <button type="button" class="pt-btn-outline" @click="showMemberModal = false">Batal</button>
             <button
@@ -660,6 +729,81 @@
               @click="createMember"
             >
               {{ saving ? 'Menyimpan...' : 'Simpan Member' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Kelola Data Anak Member (untuk Member Existing seperti Budi Santoso) -->
+    <div v-if="memberChildrenTarget" class="pt-modal-backdrop">
+      <div class="pt-panel" style="max-width: 500px; width: 100%;">
+        <div class="pt-panel-header d-flex justify-content-between align-items-center">
+          <div>
+            <span class="fw-semibold text-dark">Kelola Data Anak Member</span>
+            <span class="badge bg-primary-subtle text-primary font-monospace ms-2">{{ memberChildrenTarget.member_code }}</span>
+          </div>
+          <button type="button" class="btn-close btn-sm" @click="memberChildrenTarget = null" />
+        </div>
+        <div class="p-3">
+          <div class="p-2 px-3 bg-light rounded border mb-3" style="font-size: 12.5px;">
+            <div>Pemegang Kartu (Orang Tua/Wali): <strong>{{ memberChildrenTarget.full_name }}</strong></div>
+            <div class="text-muted">No. HP: <span class="font-monospace">{{ memberChildrenTarget.phone }}</span></div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="form-label small fw-semibold m-0">Daftar Nama Anak &amp; Umur (Tampil di Kasir POS &amp; Timer)</label>
+            <button
+              type="button"
+              class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold"
+              style="font-size: 11.5px; border-radius: 99px;"
+              @click="memberChildrenList.push({ name: '', age: 5 })"
+            >
+              + Tambah Anak
+            </button>
+          </div>
+
+          <div
+            v-for="(ch, idx) in memberChildrenList"
+            :key="idx"
+            class="d-flex gap-2 align-items-center mb-2"
+          >
+            <input
+              v-model.trim="ch.name"
+              type="text"
+              class="form-control form-control-sm"
+              :placeholder="`Nama Anak #${idx + 1}`"
+            >
+            <div class="input-group input-group-sm" style="max-width: 115px;">
+              <input
+                v-model.number="ch.age"
+                type="number"
+                min="1"
+                max="17"
+                class="form-control text-center"
+              >
+              <span class="input-group-text">Thn</span>
+            </div>
+            <button
+              v-if="memberChildrenList.length > 1"
+              type="button"
+              class="btn btn-sm btn-outline-danger py-1 px-2"
+              title="Hapus anak"
+              @click="memberChildrenList.splice(idx, 1)"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+            <button type="button" class="pt-btn-outline" @click="memberChildrenTarget = null">Batal</button>
+            <button
+              type="button"
+              class="pt-btn-primary"
+              :disabled="saving"
+              @click="submitMemberChildren"
+            >
+              {{ saving ? 'Menyimpan...' : 'Simpan Data Anak' }}
             </button>
           </div>
         </div>
@@ -1053,6 +1197,8 @@ const showPlanModal = ref(false)
 const showVoucherModal = ref(false)
 const topupTarget = ref(null)
 const topupAmount = ref(100000)
+const memberChildrenTarget = ref(null)
+const memberChildrenList = ref([{ name: '', age: 5 }])
 
 const memberForm = reactive({
   full_name: '',
@@ -1060,7 +1206,8 @@ const memberForm = reactive({
   email: '',
   tier: 'SILVER',
   card_uid: '',
-  initial_balance: 100000
+  initial_balance: 100000,
+  children: [{ name: '', age: 5 }]
 })
 
 const cardForm = reactive({
@@ -1226,9 +1373,48 @@ async function loadData() {
 async function createMember() {
   saving.value = true
   try {
-    await api('/admin/members', { method: 'POST', body: { ...memberForm } })
+    const validChildren = (memberForm.children || []).filter(c => String(c.name || '').trim().length > 0)
+    await api('/admin/members', {
+      method: 'POST',
+      body: { ...memberForm, children: validChildren }
+    })
     showMemberModal.value = false
-    feedback.value = { type: 'success', text: `Member ${memberForm.full_name} berhasil didaftarkan.` }
+    memberForm.full_name = ''
+    memberForm.phone = ''
+    memberForm.email = ''
+    memberForm.card_uid = ''
+    memberForm.children = [{ name: '', age: 5 }]
+    feedback.value = { type: 'success', text: 'Member baru beserta data anak berhasil didaftarkan.' }
+    await loadData()
+  } catch (err) {
+    feedback.value = { type: 'danger', text: err.message }
+  } finally {
+    saving.value = false
+  }
+}
+
+function openMemberChildrenModal(m) {
+  memberChildrenTarget.value = m
+  memberChildrenList.value = Array.isArray(m.children) && m.children.length > 0
+    ? m.children.map(c => ({ name: c.name, age: Number(c.age) || 5 }))
+    : [{ name: '', age: 5 }]
+}
+
+async function submitMemberChildren() {
+  if (!memberChildrenTarget.value) return
+  const validChildren = memberChildrenList.value.filter(c => String(c.name || '').trim().length > 0)
+  if (validChildren.length === 0) {
+    feedback.value = { type: 'danger', text: 'Minimal 1 nama anak wajib diisi.' }
+    return
+  }
+  saving.value = true
+  try {
+    const res = await api(`/admin/members/${memberChildrenTarget.value.id}/children`, {
+      method: 'PUT',
+      body: { children: validChildren }
+    })
+    feedback.value = { type: 'success', text: res.message || 'Data anak member berhasil disimpan.' }
+    memberChildrenTarget.value = null
     await loadData()
   } catch (err) {
     feedback.value = { type: 'danger', text: err.message }

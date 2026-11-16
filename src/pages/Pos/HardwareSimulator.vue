@@ -84,7 +84,7 @@
                 <div class="d-flex align-items-center gap-2">
                   <span class="pt-hw-meta">Buzzer: {{ gate.buzzer || 'Standby' }}</span>
                   <span class="pt-hw-meta" :class="{ 'unlocked': gate.action === 'OPEN_GATE' }">
-                    Solenoid: {{ gate.action === 'OPEN_GATE' ? 'TERBUKA' : 'TERKUNCI' }}
+                    Solenoid: {{ gate.action === 'OPEN_GATE' ? `TERBUKA (${gateCountdownSec || 10} dtk)` : 'TERKUNCI' }}
                   </span>
                 </div>
               </div>
@@ -134,6 +134,31 @@
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
                     </svg>
                     <span>Jalur Keluar (OUT)</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Mode Keluar (Khusus saat Jalur Keluar OUT dipilih) -->
+              <div v-if="direction === 'OUT'">
+                <label class="pt-label">Mode Keluar Gate (Out Gate)</label>
+                <div class="pt-seg-group">
+                  <button
+                    type="button"
+                    class="pt-seg-btn"
+                    :class="{ 'active-out': exitType === 'FINISH' }"
+                    :disabled="busy"
+                    @click="exitType = 'FINISH'"
+                  >
+                    <span>✓ Keluar Selesai / Pulang (Hilang dari List)</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="pt-seg-btn"
+                    :class="{ 'active-in': exitType === 'TOILET' }"
+                    :disabled="busy"
+                    @click="exitType = 'TOILET'"
+                  >
+                    <span>🚻 Izin ke Toilet (Maks 2x)</span>
                   </button>
                 </div>
               </div>
@@ -364,9 +389,26 @@ const logs = ref([])
 const outbox = ref([])
 
 const direction = ref('IN')
+const exitType = ref('FINISH') // 'FINISH' (pulang/selesai -> hilang dari list) | 'TOILET' (izin ke WC maks 2x)
 const credentialType = ref('QR')
 const credentialValue = ref('')
 const selectedTicketId = ref('')
+const gateCountdownSec = ref(0)
+let gateCountdownTimer = null
+
+function startGateCountdown(seconds = 10) {
+  if (gateCountdownTimer) clearInterval(gateCountdownTimer)
+  gateCountdownSec.value = seconds
+  gateCountdownTimer = setInterval(() => {
+    if (gateCountdownSec.value > 1) {
+      gateCountdownSec.value -= 1
+    } else {
+      gateCountdownSec.value = 0
+      clearInterval(gateCountdownTimer)
+      gateCountdownTimer = null
+    }
+  }, 1000)
+}
 
 const busy = ref(false)
 const refreshing = ref(false)
@@ -418,7 +460,7 @@ async function refreshAll() {
   refreshing.value = true
   try {
     const [ticketsRes, logsRes, outboxRes] = await Promise.all([
-      api('/gate/active-tickets'),
+      api('/gate/active-tickets?include_unused=1'),
       api('/simulator/logs'),
       api('/simulator/outbox')
     ])
@@ -445,6 +487,7 @@ async function scan() {
         credential_type: credentialType.value,
         credential_value: credentialValue.value.trim(),
         direction: direction.value,
+        exit_type: direction.value === 'OUT' ? exitType.value : 'FINISH',
         gate_code: direction.value === 'IN' ? 'GATE-IN-01' : 'GATE-OUT-01'
       }
     })
@@ -452,11 +495,12 @@ async function scan() {
     gate.value = {
       action: res.action,
       message: res.message,
-      buzzer: res.hardware?.buzzer || ''
+      buzzer: res.buzzer || res.hardware?.buzzer || ''
     }
 
     if (res.action === 'OPEN_GATE') {
-      notice.value = { type: 'success', text: `Akses ${direction.value} diizinkan untuk ${res.ticket?.visitor_name || 'Pengunjung'}.` }
+      startGateCountdown(Math.round((res.relay_duration_ms || 10000) / 1000))
+      notice.value = { type: 'success', text: res.message || `Akses ${direction.value} diizinkan.` }
     } else {
       notice.value = { type: 'error', text: `Akses ${direction.value} ditolak: ${res.message}` }
     }
@@ -516,6 +560,7 @@ async function testReentry() {
           credential_type: 'QR',
           credential_value: t.ticket_code,
           direction: d,
+          exit_type: d === 'OUT' ? 'TOILET' : 'FINISH',
           gate_code: d === 'IN' ? 'GATE-IN-01' : 'GATE-OUT-01'
         }
       })

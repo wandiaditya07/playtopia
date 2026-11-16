@@ -238,6 +238,7 @@ function initSqliteFallback() {
       outlet_id INTEGER DEFAULT 1,
       product_id INTEGER NOT NULL,
       member_id INTEGER,
+      visitor_name TEXT,
       status TEXT DEFAULT 'unused',
       valid_date TEXT,
       play_minutes INTEGER,
@@ -284,7 +285,10 @@ function initSqliteFallback() {
       name TEXT NOT NULL,
       phone TEXT NOT NULL,
       email TEXT,
+      photo_url TEXT,
+      plan_id INTEGER,
       registered_outlet_id INTEGER DEFAULT 1,
+      expires_on TEXT,
       balance REAL DEFAULT 0,
       points_balance INTEGER DEFAULT 120,
       tier TEXT DEFAULT 'GOLD',
@@ -355,11 +359,20 @@ function initSqliteFallback() {
     CREATE TABLE IF NOT EXISTS online_registrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       registration_code TEXT,
+      outlet_id INTEGER DEFAULT 1,
+      guest_name TEXT,
       visitor_name TEXT,
       phone TEXT,
+      email TEXT,
       visit_date TEXT,
-      status TEXT DEFAULT 'verified',
-      created_at TEXT
+      children_count INTEGER DEFAULT 1,
+      companions_count INTEGER DEFAULT 1,
+      children_json TEXT,
+      status TEXT DEFAULT 'registered',
+      order_id INTEGER,
+      ticket_id INTEGER,
+      created_at TEXT,
+      updated_at TEXT
     );
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

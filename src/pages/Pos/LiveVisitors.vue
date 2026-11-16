@@ -9,7 +9,23 @@
         </div>
       </div>
 
-      <div class="d-flex align-items-center gap-2">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a
+          href="/timer-monitor"
+          target="_blank"
+          rel="noopener"
+          class="pt-btn-outline text-decoration-none"
+          style="border-color: #0284c7; color: #0284c7; font-weight: 600;"
+          title="Buka Layar TV Monitor Timer Area Bermain di Tab/Layar Baru"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+          <span>Layar TV Monitor Timer</span>
+        </a>
+
         <router-link to="/app/pos" class="pt-btn-outline text-decoration-none">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
@@ -67,6 +83,21 @@
       </div>
     </div>
 
+    <!-- Alert Banner Pengingat -15 Menit Sebelum Waktu Habis -->
+    <div
+      v-if="warningVisitors.length > 0"
+      class="pt-alert mb-3 d-flex align-items-center justify-content-between"
+      style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a;"
+    >
+      <div>
+        <strong>📢 Pengumuman -15 Menit (Persiapan Keluar):</strong>
+        <span class="ms-1">
+          {{ warningVisitors.map(v => `${v.visitor_name} (Sisa ${v.remaining_minutes} mnt)`).join(' • ') }}
+        </span>
+      </div>
+      <span class="badge bg-warning text-dark">Sisa &le; 15 Menit</span>
+    </div>
+
     <!-- Alert Banner -->
     <div
       v-if="feedbackMsg"
@@ -77,18 +108,23 @@
       <button type="button" class="btn-close btn-sm" @click="feedbackMsg = ''" />
     </div>
 
-    <!-- Active Visitors Table -->
+    <!-- Active Visitors Table (Temporary List: Hanya Pengunjung yang Sedang di Dalam Area) -->
     <div class="pt-panel">
-      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="d-flex align-items-center gap-2">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="9" cy="7" r="4" />
             <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
           </svg>
-          <span class="fw-semibold text-dark">Daftar Tiket &amp; Durasi Bermain</span>
+          <span class="fw-semibold text-dark">Daftar Aktif Sementara (Otomatis Hilang Saat Out Gate)</span>
         </div>
-        <span class="pt-tag">Pembaruan otomatis 5 detik</span>
+        <div class="d-flex align-items-center gap-2">
+          <router-link to="/app/access/logs" class="small text-decoration-none fw-semibold" style="font-size: 12px;">
+            Lihat Riwayat Keluar / Logs ↗
+          </router-link>
+          <span class="pt-tag">Pembaruan otomatis 5 detik</span>
+        </div>
       </div>
 
       <div class="table-responsive">
@@ -131,30 +167,43 @@
               <td class="font-monospace text-muted">{{ v.expiry_time ? fmtTime(v.expiry_time) : '-' }}</td>
               <td>
                 <span
+                  v-if="v.overtime_paid === 1"
+                  class="pt-status-badge allowed"
+                >
+                  Overtime Lunas (Siap Out Gate)
+                </span>
+                <span
+                  v-else
                   class="pt-status-badge"
                   :class="v.is_overtime ? 'denied' : v.remaining_minutes <= 15 ? 'warning' : 'allowed'"
                 >
-                  {{ v.is_overtime ? `Overtime ${v.calculated_overtime_minutes} mnt` : `Sisa ${v.remaining_minutes} mnt` }}
+                  {{ v.is_overtime ? `Overtime ${v.calculated_overtime_minutes} mnt` : (v.remaining_minutes <= 15 && !v.is_open_play ? `⚠️ Sisa ${v.remaining_minutes} mnt (-15m)` : `Sisa ${v.remaining_minutes} mnt`) }}
                 </span>
               </td>
               <td>
                 <span class="pt-tag font-monospace">{{ v.reentry_count }}/{{ v.max_reentry }}</span>
               </td>
               <td class="text-end">
-                <button
-                  v-if="v.is_overtime && v.overtime_paid !== 1"
-                  type="button"
-                  class="pt-btn-danger"
-                  @click="openOvertimeModal(v)"
-                >
-                  Bayar Overtime ({{ rupiah(v.overtime_fee || 15000) }})
-                </button>
-                <span v-else-if="v.overtime_paid === 1" class="pt-status-badge allowed">
-                  Overtime Lunas
-                </span>
-                <span v-else class="text-muted" style="font-size: 12px;">
-                  Aktif
-                </span>
+                <div class="d-inline-flex align-items-center gap-1">
+                  <button
+                    v-if="v.is_overtime && v.overtime_paid !== 1"
+                    type="button"
+                    class="pt-btn-danger"
+                    @click="openOvertimeModal(v)"
+                  >
+                    Bayar Overtime ({{ rupiah(v.overtime_fee || v.ticket_price || 50000) }})
+                  </button>
+                  <button
+                    v-else
+                    type="button"
+                    class="pt-btn-outline"
+                    style="padding: 4px 10px; font-size: 12px;"
+                    title="Scan Keluar Gate (Selesai & Pindah ke Logs)"
+                    @click="triggerGateExitNow(v)"
+                  >
+                    {{ v.overtime_paid === 1 ? '✓ Scan Out Gate' : 'Out Gate' }}
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -180,12 +229,16 @@
               <span class="text-muted">Kode Tiket</span>
               <span class="font-monospace fw-semibold">{{ selectedTicket.ticket_code }}</span>
             </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="text-muted">Paket &amp; Harga 1 Tiket</span>
+              <span class="fw-semibold text-dark">{{ selectedTicket.package_name }} ({{ rupiah(selectedTicket.ticket_price || 50000) }})</span>
+            </div>
             <div class="d-flex justify-content-between mb-2">
-              <span class="text-muted">Durasi Overtime</span>
+              <span class="text-muted">Durasi Overtime (Lewat Toleransi 10 Mnt)</span>
               <span class="pt-status-badge denied">{{ selectedTicket.calculated_overtime_minutes }} Menit</span>
             </div>
             <div class="d-flex justify-content-between border-top pt-2 align-items-center">
-              <span class="fw-semibold text-dark">Total Tagihan Overtime</span>
+              <span class="fw-semibold text-dark">Total Charge (Harga 1 Tiket / Jam)</span>
               <span class="fw-bold text-danger" style="font-size: 16px;">{{ rupiah(overtimeAmount) }}</span>
             </div>
           </div>
@@ -303,11 +356,12 @@ async function fetchVisitors() {
   }
 }
 
-const overtimeVisitors = computed(() => visitors.value.filter(v => v.is_overtime))
-const safeVisitors = computed(() => visitors.value.filter(v => !v.is_overtime))
+const overtimeVisitors = computed(() => visitors.value.filter(v => v.is_overtime && v.overtime_paid !== 1))
+const warningVisitors = computed(() => visitors.value.filter(v => !v.is_overtime && !v.is_open_play && v.remaining_minutes <= 15))
+const safeVisitors = computed(() => visitors.value.filter(v => !v.is_overtime || v.overtime_paid === 1))
 
 const overtimeAmount = computed(() => {
-  return Number(selectedTicket.value?.overtime_fee) || 15000
+  return Number(selectedTicket.value?.overtime_fee) || Number(selectedTicket.value?.ticket_price) || 50000
 })
 
 const isPayDisabled = computed(() => {
@@ -322,7 +376,32 @@ const isPayDisabled = computed(() => {
 function openOvertimeModal(ticket) {
   selectedTicket.value = ticket
   payMethod.value = 'cash'
-  cashReceived.value = Number(ticket.overtime_fee) || 15000
+  cashReceived.value = Number(ticket.overtime_fee) || Number(ticket.ticket_price) || 50000
+}
+
+async function triggerGateExitNow(ticket) {
+  try {
+    const res = await api('/gate/verify-access', {
+      method: 'POST',
+      body: {
+        direction: 'OUT',
+        exit_type: 'FINISH',
+        credential_type: 'QR',
+        credential_value: ticket.ticket_code
+      }
+    })
+    if (res.action === 'OPEN_GATE') {
+      feedbackType.value = 'success'
+      feedbackMsg.value = `${ticket.visitor_name} (${ticket.ticket_code}) telah keluar gate (OUT) dan dipindahkan ke Riwayat/Logs.`
+      await fetchVisitors()
+    } else {
+      feedbackType.value = 'danger'
+      feedbackMsg.value = res.message || 'Gagal melakukan scan keluar gate.'
+    }
+  } catch (err) {
+    feedbackType.value = 'danger'
+    feedbackMsg.value = err.message
+  }
 }
 
 function closeOvertimeModal() {

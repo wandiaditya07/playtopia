@@ -19,6 +19,14 @@
       <div class="d-flex flex-wrap gap-2">
         <button
           type="button"
+          class="btn btn-sm fw-semibold"
+          :class="waiverShownOnDisplay ? 'btn-info text-white' : 'btn-outline-info'"
+          @click="toggleWaiverOnCustomerDisplay"
+        >
+          {{ waiverShownOnDisplay ? 'Tutup QR Waiver di Layar Pelanggan' : 'Tampilkan QR Waiver di Layar Pelanggan' }}
+        </button>
+        <button
+          type="button"
           class="btn btn-outline-primary btn-sm"
           @click="openCustomerDisplay"
         >
@@ -177,18 +185,117 @@
             </button>
           </div>
           <div class="card-body">
-            <!-- Member -->
+            <!-- Tarik Data Waiver Online (Poin 15, 16, 17) -->
+            <div class="mb-3 p-2 rounded border" style="background-color: #f0f9ff; border-color: #bae6fd !important;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label small fw-bold text-dark m-0" for="waiver-input">
+                  Tarik Data Waiver Online (QR / No. HP)
+                </label>
+                <a href="/waiver" target="_blank" rel="noopener" class="small text-decoration-none fw-semibold" style="font-size: 11px;">
+                  Buka Form ↗
+                </a>
+              </div>
+              <div class="input-group input-group-sm">
+                <input
+                  id="waiver-input"
+                  v-model.trim="waiverQuery"
+                  type="text"
+                  class="form-control"
+                  placeholder="Scan QR Waiver / Ketik No. HP / Nama"
+                  :disabled="waiverBusy || submitting"
+                  @keyup.enter="lookupWaiver"
+                >
+                <button
+                  v-if="!selectedWaiver"
+                  type="button"
+                  class="btn btn-primary fw-semibold"
+                  :disabled="!waiverQuery || waiverBusy || submitting"
+                  @click="lookupWaiver"
+                >
+                  {{ waiverBusy ? '...' : 'Tarik' }}
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="btn btn-outline-danger"
+                  :disabled="submitting"
+                  @click="clearWaiver"
+                >
+                  Reset
+                </button>
+              </div>
+              <div v-if="waiverError" class="small text-danger mt-1" style="font-size: 11.5px;">
+                {{ waiverError }}
+              </div>
+
+              <!-- Daftar Hasil Pencarian jika lebih dari 1 -->
+              <div v-if="waiverResults.length > 1 && !selectedWaiver" class="mt-2 bg-white rounded border p-1" style="max-height: 130px; overflow-y: auto;">
+                <button
+                  v-for="w in waiverResults"
+                  :key="w.id"
+                  type="button"
+                  class="btn btn-sm btn-light w-100 text-start mb-1 d-flex justify-content-between align-items-center"
+                  style="font-size: 11.5px;"
+                  @click="selectWaiverRecord(w)"
+                >
+                  <span><strong>{{ w.parent_name }}</strong> ({{ w.phone }})</span>
+                  <span class="badge bg-info-subtle text-info">{{ w.children.length }} Anak</span>
+                </button>
+              </div>
+
+              <!-- Detail Waiver Terpilih + Klik Nama Anak -->
+              <div v-if="selectedWaiver" class="mt-2 bg-white rounded border p-2 small">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <div>
+                    <strong class="text-dark">{{ selectedWaiver.parent_name }}</strong>
+                    <span class="text-muted ms-1">({{ selectedWaiver.phone }})</span>
+                  </div>
+                  <span class="badge bg-primary-subtle text-primary font-monospace" style="font-size: 10px;">
+                    {{ selectedWaiver.registration_code }}
+                  </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="text-muted" style="font-size: 11px;">Klik nama anak untuk pilih / batal pilih:</span>
+                  <router-link
+                    :to="selectedWaiver.member_data ? '/app/members' : '/app/registrations'"
+                    class="text-decoration-none fw-semibold"
+                    style="font-size: 10.5px;"
+                  >
+                    Kelola Anak ↗
+                  </router-link>
+                </div>
+                <div v-if="selectedWaiver.children && selectedWaiver.children.length > 0" class="d-flex flex-wrap gap-1">
+                  <button
+                    v-for="(ch, cIdx) in selectedWaiver.children"
+                    :key="cIdx"
+                    type="button"
+                    class="btn btn-xs py-0 px-2 fw-semibold"
+                    :class="isChildAssignedInCart(ch.name) ? 'btn-success text-white' : 'btn-outline-primary'"
+                    style="font-size: 11.5px; border-radius: 99px;"
+                    @click="toggleWaiverChildInCart(ch.name)"
+                  >
+                    {{ isChildAssignedInCart(ch.name) ? '✓ ' : '+ ' }}{{ ch.name }} ({{ ch.age }} thn)
+                  </button>
+                </div>
+                <div v-else class="text-muted fst-italic" style="font-size: 11.5px;">
+                  Belum ada data anak terdaftar. Silakan tambahkan melalui menu
+                  <router-link to="/app/members" class="fw-semibold text-decoration-none">Direktori Member ↗</router-link>
+                </div>
+              </div>
+            </div>
+
+            <!-- Member (Poin 4: Kartu Member Sistem Swipe, Diskon 20% Tiket & 10% Cafe, Expired 3 Bulan) -->
             <label
               class="form-label small text-muted mb-1"
               for="member-input"
-            >Member (tap kartu RFID / nomor HP)</label>
+            >Member (Swipe Kartu Member / Nama / Kode / No. HP)</label>
             <div class="input-group input-group-sm mb-1">
               <input
                 id="member-input"
                 v-model.trim="memberQuery"
                 type="text"
                 class="form-control"
-                placeholder="UID kartu atau No. HP"
+                placeholder="Swipe Kartu Member, Nama, Kode (MBR-001), atau No. HP"
                 :disabled="lookupBusy || !!member || submitting"
                 @keyup.enter="lookupMember"
               >
@@ -221,8 +328,108 @@
               v-if="member"
               class="alert alert-success py-2 small mb-3"
             >
-              <strong>{{ member.name }}</strong><br>
-              Saldo {{ rupiah(member.balance) }} &middot; Diskon {{ member.discount_pct }}%
+              <div class="d-flex justify-content-between align-items-center">
+                <strong>{{ member.name }}</strong>
+                <span class="badge bg-white text-success font-monospace" style="font-size: 10.5px;">
+                  {{ member.member_code || 'MEMBER SWIPE' }}
+                </span>
+              </div>
+              <div>
+                Saldo <strong>{{ rupiah(member.balance) }}</strong> &middot; Diskon <strong>Tiket 20%</strong> &amp; <strong>Cafe 10%</strong>
+              </div>
+              <div v-if="member.expires_on" class="text-dark mt-1" style="font-size: 11px;">
+                💳 Sistem Swipe &middot; Berlaku (3 Bln) s/d: <strong>{{ fmtShortDate(member.expires_on) }}</strong>
+              </div>
+            </div>
+
+            <!-- Voucher Potongan Diskon (Poin 3 - Terpisah dari Member) -->
+            <div class="mb-3 p-2 rounded border" style="background-color: #fffbeb; border-color: #fde68a !important;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label small fw-bold text-dark m-0" for="voucher-input">
+                  Voucher Potongan Diskon
+                </label>
+                <router-link to="/app/vouchers" class="small text-decoration-none fw-semibold" style="font-size: 11px; color: #b45309;">
+                  Kelola Voucher ↗
+                </router-link>
+              </div>
+              <div class="input-group input-group-sm">
+                <input
+                  id="voucher-input"
+                  v-model.trim="voucherQuery"
+                  type="text"
+                  class="form-control font-monospace text-uppercase"
+                  placeholder="Ketik / Scan Kode Voucher..."
+                  :disabled="voucherBusy || !!appliedVoucher || submitting"
+                  @keyup.enter="lookupVoucher"
+                >
+                <button
+                  v-if="!appliedVoucher"
+                  type="button"
+                  class="btn btn-warning fw-semibold text-dark"
+                  :disabled="!voucherQuery || voucherBusy || submitting"
+                  @click="lookupVoucher"
+                >
+                  {{ voucherBusy ? '...' : 'Pakai' }}
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="btn btn-outline-danger"
+                  :disabled="submitting"
+                  @click="clearVoucher"
+                >
+                  Lepas
+                </button>
+              </div>
+
+              <div v-if="voucherError" class="small text-danger mt-1" style="font-size: 11.5px;">
+                {{ voucherError }}
+              </div>
+
+              <!-- Pilihan Cepat Voucher Aktif -->
+              <div v-if="!appliedVoucher && availableVouchers.length > 0" class="mt-2">
+                <div class="text-muted mb-1" style="font-size: 10.5px;">Pilih cepat voucher aktif:</div>
+                <div class="d-flex flex-wrap gap-1">
+                  <button
+                    v-for="v in availableVouchers.slice(0, 4)"
+                    :key="v.id"
+                    type="button"
+                    class="btn btn-xs btn-outline-dark py-0 px-2 font-monospace"
+                    style="font-size: 11px; border-radius: 99px;"
+                    :disabled="submitting"
+                    @click="selectVoucherObj(v)"
+                  >
+                    🏷️ {{ v.code }} ({{ (v.discount_type === 'percent' || v.discount_type === 'percentage') ? `${v.discount_value}%` : rupiah(v.discount_value) }})
+                  </button>
+                </div>
+              </div>
+
+              <!-- Info Voucher Terpasang -->
+              <div v-if="appliedVoucher" class="mt-2 bg-white rounded border p-2 small">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong class="font-monospace text-dark">{{ appliedVoucher.code }}</strong>
+                    <span class="text-muted ms-1">&middot; {{ appliedVoucher.name }}</span>
+                  </div>
+                  <span class="badge bg-warning text-dark">
+                    {{ (appliedVoucher.discount_type === 'percent' || appliedVoucher.discount_type === 'percentage') ? `Diskon ${appliedVoucher.discount_value}%` : `Potongan ${rupiah(appliedVoucher.discount_value)}` }}
+                  </span>
+                </div>
+                <div
+                  v-if="Number(appliedVoucher.min_purchase) > 0 && cartSubtotal < Number(appliedVoucher.min_purchase)"
+                  class="text-danger fw-semibold mt-1"
+                  style="font-size: 11px;"
+                >
+                  ⚠️ Min. belanja {{ rupiah(appliedVoucher.min_purchase) }} agar potongan voucher aktif.
+                </div>
+                <div
+                  v-else-if="voucherDiscountAmount > 0"
+                  class="text-success fw-semibold mt-1"
+                  style="font-size: 11px;"
+                >
+                  ✓ Potongan voucher {{ rupiah(voucherDiscountAmount) }} aktif{{ member ? ' (Digabung dengan Diskon Member!)' : '!' }}
+                </div>
+              </div>
             </div>
 
             <!-- Item -->
@@ -304,10 +511,32 @@
                 <span>Subtotal</span><span>{{ rupiah(cartSubtotal) }}</span>
               </div>
               <div
-                v-if="discountAmount > 0"
+                v-if="memberPlaygroundDiscount > 0"
                 class="d-flex justify-content-between text-success"
               >
-                <span>Diskon member ({{ member.discount_pct }}%)</span>
+                <span>Diskon Member Tiket (20%)</span>
+                <span>- {{ rupiah(memberPlaygroundDiscount) }}</span>
+              </div>
+              <div
+                v-if="memberCafeDiscount > 0"
+                class="d-flex justify-content-between text-success"
+              >
+                <span>Diskon Member Cafe (10%)</span>
+                <span>- {{ rupiah(memberCafeDiscount) }}</span>
+              </div>
+              <div
+                v-if="voucherDiscountAmount > 0"
+                class="d-flex justify-content-between text-success"
+              >
+                <span>Diskon Voucher ({{ appliedVoucher?.code }})</span>
+                <span>- {{ rupiah(voucherDiscountAmount) }}</span>
+              </div>
+              <div
+                v-if="memberDiscountAmount > 0 && voucherDiscountAmount > 0"
+                class="d-flex justify-content-between small fw-bold text-primary pt-1"
+                style="font-size: 11.5px;"
+              >
+                <span>Total Gabungan Diskon (Member + Voucher)</span>
                 <span>- {{ rupiah(discountAmount) }}</span>
               </div>
               <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
@@ -595,11 +824,32 @@
               <span>{{ rupiah(receipt.subtotal) }}</span>
             </div>
             <div
-              v-if="receipt.discount > 0"
+              v-if="receipt.member_playground_discount > 0"
+              class="d-flex justify-content-between py-1 text-success"
+            >
+              <span>Diskon Member Tiket (20%)</span>
+              <span>- {{ rupiah(receipt.member_playground_discount) }}</span>
+            </div>
+            <div
+              v-if="receipt.member_cafe_discount > 0"
+              class="d-flex justify-content-between py-1 text-success"
+            >
+              <span>Diskon Member Cafe (10%)</span>
+              <span>- {{ rupiah(receipt.member_cafe_discount) }}</span>
+            </div>
+            <div
+              v-if="!receipt.member_playground_discount && !receipt.member_cafe_discount && (receipt.member_discount > 0 || (!receipt.voucher_discount && receipt.discount > 0))"
               class="d-flex justify-content-between py-1 text-success"
             >
               <span>Diskon Member</span>
-              <span>- {{ rupiah(receipt.discount) }}</span>
+              <span>- {{ rupiah(receipt.member_discount || receipt.discount) }}</span>
+            </div>
+            <div
+              v-if="receipt.voucher_discount > 0"
+              class="d-flex justify-content-between py-1 text-success"
+            >
+              <span>Diskon Voucher {{ receipt.voucher_code ? `(${receipt.voucher_code})` : '' }}</span>
+              <span>- {{ rupiah(receipt.voucher_discount) }}</span>
             </div>
             <div class="receipt-dashed-divider my-1" />
             <div class="d-flex justify-content-between py-1 fw-bold fs-6 text-dark">
@@ -723,6 +973,22 @@ const member = ref(null)
 const lookupBusy = ref(false)
 const lookupError = ref('')
 
+// Voucher Potongan Diskon state (Poin 3)
+const voucherQuery = ref('')
+const appliedVoucher = ref(null)
+const availableVouchers = ref([])
+const voucherBusy = ref(false)
+const voucherError = ref('')
+
+// Waiver Online state
+const waiverQuery = ref('')
+const selectedWaiver = ref(null)
+const waiverResults = ref([])
+const waiverBusy = ref(false)
+const waiverError = ref('')
+const waiverShownOnDisplay = ref(false)
+const waiverPublicUrl = computed(() => `${window.location.origin}/waiver`)
+
 const showPayment = ref(false)
 const paymentMethod = ref('CASH')
 const cashGiven = ref('')
@@ -759,9 +1025,45 @@ function getCartQty(productId) {
 }
 
 const cartSubtotal = computed(() => cart.value.reduce((s, i) => s + i.price * i.qty, 0))
-const discountAmount = computed(() =>
-  member.value ? Math.round((cartSubtotal.value * (member.value.discount_pct || 0)) / 100) : 0
+const playgroundSubtotal = computed(() =>
+  cart.value.filter(i => i.category === 'PLAYGROUND').reduce((s, i) => s + i.price * i.qty, 0)
 )
+const cafeSubtotal = computed(() =>
+  cart.value.filter(i => i.category === 'CAFE').reduce((s, i) => s + i.price * i.qty, 0)
+)
+// Poin 4: Diskon Member 20% untuk Tiket Masuk Playground & 10% untuk Menu Cafe
+const memberPlaygroundDiscount = computed(() =>
+  member.value ? Math.round((playgroundSubtotal.value * 20) / 100) : 0
+)
+const memberCafeDiscount = computed(() =>
+  member.value ? Math.round((cafeSubtotal.value * 10) / 100) : 0
+)
+const memberDiscountAmount = computed(() => memberPlaygroundDiscount.value + memberCafeDiscount.value)
+
+function fmtShortDate(val) {
+  if (!val) return '-'
+  const d = new Date(val)
+  if (Number.isNaN(d.getTime())) return String(val).slice(0, 10)
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+const voucherDiscountAmount = computed(() => {
+  if (!appliedVoucher.value || cartSubtotal.value <= 0) return 0
+  const minPurchase = Number(appliedVoucher.value.min_purchase) || 0
+  if (cartSubtotal.value < minPurchase) return 0
+  const dType = String(appliedVoucher.value.discount_type || '').toLowerCase()
+  const dVal = Number(appliedVoucher.value.discount_value) || 0
+  let raw = 0
+  if (dType === 'percent' || dType === 'percentage') {
+    raw = Math.round((cartSubtotal.value * dVal) / 100)
+    const maxD = Number(appliedVoucher.value.max_discount) || 0
+    if (maxD > 0) raw = Math.min(raw, Math.round(maxD))
+  } else {
+    raw = Math.round(dVal)
+  }
+  const remainingAfterMember = Math.max(0, cartSubtotal.value - memberDiscountAmount.value)
+  return Math.min(raw, remainingAfterMember)
+})
+const discountAmount = computed(() => memberDiscountAmount.value + voucherDiscountAmount.value)
 const cartTotal = computed(() => Math.max(0, cartSubtotal.value - discountAmount.value))
 const cashChange = computed(() => (Number(cashGiven.value) || 0) - cartTotal.value)
 
@@ -806,9 +1108,16 @@ async function loadAll() {
   productsLoading.value = true
   shiftLoading.value = true
   try {
-    const [p, s] = await Promise.all([api('/products'), api('/shifts/current')])
+    const [p, s, vRes] = await Promise.all([
+      api('/products'),
+      api('/shifts/current'),
+      api('/members/vouchers/active').catch(() => ({ success: false, data: [] }))
+    ])
     products.value = p.data
     shift.value = s.data
+    if (vRes?.success && Array.isArray(vRes.data)) {
+      availableVouchers.value = vRes.data
+    }
   } catch (err) {
     loadError.value = err.message
   } finally {
@@ -832,6 +1141,7 @@ function addToCart(product) {
   const existing = cart.value.find(i => i.product_id === product.id)
   if (existing) {
     if (existing.qty < 99) existing.qty += 1
+    autoAssignWaiverChildrenToCart()
     return
   }
   cart.value.push({
@@ -843,10 +1153,149 @@ function addToCart(product) {
     qty: 1,
     visitor_name: ''
   })
+  autoAssignWaiverChildrenToCart()
+}
+
+function autoAssignWaiverChildrenToCart() {
+  if (!selectedWaiver.value || !Array.isArray(selectedWaiver.value.children)) return
+  const childNames = selectedWaiver.value.children.map(c => c.name).filter(Boolean)
+  if (childNames.length === 0) return
+
+  const pgItems = cart.value.filter(i => i.category === 'PLAYGROUND')
+  let nameIdx = 0
+  for (const item of pgItems) {
+    if (!item.visitor_name.trim()) {
+      const slice = childNames.slice(nameIdx, nameIdx + item.qty)
+      if (slice.length > 0) {
+        item.visitor_name = slice.join(', ')
+        nameIdx += slice.length
+      }
+    }
+  }
+}
+
+function isChildAssignedInCart(childName) {
+  const target = String(childName || '').trim().toLowerCase()
+  return cart.value.some(i =>
+    i.category === 'PLAYGROUND' &&
+    i.visitor_name.split(',').map(s => s.trim().toLowerCase()).includes(target)
+  )
+}
+
+function toggleWaiverChildInCart(childName) {
+  const name = String(childName || '').trim()
+  if (!name || !canEditCart.value) return
+  const targetLower = name.toLowerCase()
+
+  // Cek apakah anak ini sudah masuk ke salah satu item tiket Playground di keranjang
+  const assignedItem = cart.value.find(i =>
+    i.category === 'PLAYGROUND' &&
+    i.visitor_name.split(',').map(s => s.trim().toLowerCase()).includes(targetLower)
+  )
+
+  // Jika sudah terpilih -> klik lagi akan melepas (uncheck) & mengurangi qty tiket
+  if (assignedItem) {
+    const remainingNames = assignedItem.visitor_name
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => s && s.toLowerCase() !== targetLower)
+
+    if (remainingNames.length === 0) {
+      // Opsi B: Jika anak terakhir dilepas, hapus item tiket dari keranjang (qty -> 0)
+      cart.value = cart.value.filter(i => i !== assignedItem)
+    } else {
+      assignedItem.visitor_name = remainingNames.join(', ')
+      assignedItem.qty = Math.max(remainingNames.length, assignedItem.qty - 1)
+    }
+    return
+  }
+
+  // Jika belum terpilih -> masukkan ke tiket Playground di keranjang
+  let pgItem = cart.value.find(i => i.category === 'PLAYGROUND' && !i.visitor_name.trim())
+  if (!pgItem) {
+    pgItem = cart.value.find(i => i.category === 'PLAYGROUND')
+  }
+
+  // Jika belum ada tiket playground di keranjang, tambahkan paket bermain pertama secara otomatis
+  if (!pgItem) {
+    const firstPgProduct = products.value.find(p => p.category === 'PLAYGROUND')
+    if (firstPgProduct) {
+      cart.value.push({
+        product_id: firstPgProduct.id,
+        name: firstPgProduct.name,
+        category: firstPgProduct.category,
+        price: firstPgProduct.price,
+        duration_minutes: firstPgProduct.duration_minutes,
+        qty: 1,
+        visitor_name: name
+      })
+    }
+    return
+  }
+
+  const currentNames = pgItem.visitor_name
+    ? pgItem.visitor_name.split(',').map(s => s.trim()).filter(Boolean)
+    : []
+
+  if (currentNames.length === 0) {
+    pgItem.visitor_name = name
+  } else {
+    currentNames.push(name)
+    pgItem.visitor_name = currentNames.join(', ')
+    if (pgItem.qty < currentNames.length) {
+      pgItem.qty = currentNames.length
+    }
+  }
+}
+
+async function lookupWaiver() {
+  if (!waiverQuery.value || waiverBusy.value) return
+  waiverBusy.value = true
+  waiverError.value = ''
+  waiverResults.value = []
+  try {
+    const res = await api(`/waivers/search?q=${encodeURIComponent(waiverQuery.value)}`)
+    const list = Array.isArray(res.data) ? res.data : []
+    if (list.length === 0) {
+      waiverError.value = 'Data Waiver tidak ditemukan. Pastikan pengunjung sudah isi form /waiver.'
+    } else if (list.length === 1) {
+      selectWaiverRecord(list[0])
+    } else {
+      waiverResults.value = list
+    }
+  } catch (err) {
+    waiverError.value = err.message || 'Gagal mencari data waiver.'
+  } finally {
+    waiverBusy.value = false
+  }
+}
+
+function selectWaiverRecord(w) {
+  selectedWaiver.value = w
+  waiverResults.value = []
+  waiverError.value = ''
+  if (w?.member_data && !member.value) {
+    member.value = w.member_data
+  }
+  autoAssignWaiverChildrenToCart()
+}
+
+function clearWaiver() {
+  selectedWaiver.value = null
+  waiverResults.value = []
+  waiverQuery.value = ''
+  waiverError.value = ''
 }
 
 function changeQty(item, delta) {
-  item.qty = Math.min(99, Math.max(1, item.qty + delta))
+  const nextQty = Math.min(99, Math.max(1, item.qty + delta))
+  item.qty = nextQty
+  if (delta < 0 && item.category === 'PLAYGROUND' && item.visitor_name) {
+    const names = item.visitor_name.split(',').map(s => s.trim()).filter(Boolean)
+    if (names.length > nextQty) {
+      item.visitor_name = names.slice(0, nextQty).join(', ')
+    }
+  }
 }
 
 function removeFromCart(item) {
@@ -856,6 +1305,37 @@ function removeFromCart(item) {
 function clearCart() {
   cart.value = []
   clearMember()
+  clearVoucher()
+  clearWaiver()
+}
+
+// Voucher Potongan Diskon (Poin 3)
+async function lookupVoucher() {
+  if (!voucherQuery.value || voucherBusy.value) return
+  voucherBusy.value = true
+  voucherError.value = ''
+  try {
+    const res = await api(`/members/vouchers/lookup/${encodeURIComponent(voucherQuery.value.trim())}`)
+    if (res.success && res.data) {
+      selectVoucherObj(res.data)
+    }
+  } catch (err) {
+    voucherError.value = err.message || 'Kode voucher tidak valid.'
+  } finally {
+    voucherBusy.value = false
+  }
+}
+
+function selectVoucherObj(v) {
+  appliedVoucher.value = v
+  voucherQuery.value = v.code
+  voucherError.value = ''
+}
+
+function clearVoucher() {
+  appliedVoucher.value = null
+  voucherQuery.value = ''
+  voucherError.value = ''
 }
 
 // Member
@@ -866,6 +1346,18 @@ async function lookupMember() {
   try {
     const res = await api(`/members/lookup/${encodeURIComponent(memberQuery.value)}`)
     member.value = res.data
+    if (member.value && !selectedWaiver.value) {
+      selectedWaiver.value = {
+        id: `mbr-${member.value.id}`,
+        member_id: member.value.id,
+        registration_code: member.value.waiver_code || member.value.member_code,
+        parent_name: member.value.name,
+        phone: member.value.phone,
+        children: Array.isArray(member.value.children) ? member.value.children : [],
+        member_data: member.value
+      }
+      autoAssignWaiverChildrenToCart()
+    }
   } catch (err) {
     lookupError.value = err.status === 404 ? 'Member tidak ditemukan.' : err.message
   } finally {
@@ -908,32 +1400,43 @@ async function submitTransaction() {
     const res = await api('/transactions', {
       method: 'POST',
       body: {
-        customer_name: cart.value.find(i => i.category === 'PLAYGROUND')?.visitor_name.trim() || 'Pengunjung Umum',
+        customer_name: selectedWaiver.value?.parent_name || cart.value.find(i => i.category === 'PLAYGROUND')?.visitor_name.trim() || 'Pengunjung Umum',
         payment_method: paymentMethod.value,
         member_id: member.value?.id ?? null,
+        voucher_id: (appliedVoucher.value && voucherDiscountAmount.value > 0) ? appliedVoucher.value.id : null,
+        voucher_code: (appliedVoucher.value && voucherDiscountAmount.value > 0) ? appliedVoucher.value.code : null,
         cash_given: paymentMethod.value === 'CASH' ? Number(cashGiven.value) : undefined,
         items: cart.value.map(i => ({
           product_id: i.product_id,
           qty: i.qty,
-          visitor_names: i.category === 'PLAYGROUND' ? [i.visitor_name.trim()] : []
+          visitor_names: i.category === 'PLAYGROUND'
+            ? i.visitor_name.split(',').map(s => s.trim()).filter(Boolean)
+            : []
         }))
       }
     })
 
     receipt.value = res.data
     showPayment.value = false
-    channel?.postMessage({
+    waiverShownOnDisplay.value = false
+    sendDisplayMessage({
       type: 'PAYMENT_SUCCESS',
       invoice_number: res.data.invoice_number,
       total_amount: res.data.total_amount,
       cash_given: paymentMethod.value === 'CASH' ? (Number(cashGiven.value) || 0) : null,
       cash_change: paymentMethod.value === 'CASH' ? Math.max(0, cashChange.value) : null,
-      payment_method: paymentMethod.value
+      payment_method: paymentMethod.value,
+      cashier_name: auth.user?.name || 'Kasir'
     })
 
     cart.value = []
     clearMember()
+    clearVoucher()
+    clearWaiver()
     loadVisitors()
+    api('/members/vouchers/active').then(vRes => {
+      if (vRes?.success && Array.isArray(vRes.data)) availableVouchers.value = vRes.data
+    }).catch(() => {})
     // Sync shift
     api('/shifts/current').then(s => { shift.value = s.data }).catch(() => {})
   } catch (err) {
@@ -944,8 +1447,21 @@ async function submitTransaction() {
 }
 
 // Customer display
+function sendDisplayMessage(payload) {
+  const msg = { ...payload, _ts: Date.now() }
+  channel?.postMessage(msg)
+  try {
+    localStorage.setItem('playtopia_pos_display_sync', JSON.stringify(msg))
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
 function broadcastCart() {
-  channel?.postMessage({
+  if (cart.value.length > 0) {
+    waiverShownOnDisplay.value = false
+  }
+  sendDisplayMessage({
     type: 'UPDATE_CART',
     items: cart.value.map(i => ({ name: i.name, category: i.category, price: i.price, qty: i.qty, duration_minutes: i.duration_minutes })),
     customer_name: member.value?.name || '',
@@ -962,16 +1478,41 @@ function broadcastCart() {
   })
 }
 
+function toggleWaiverOnCustomerDisplay() {
+  waiverShownOnDisplay.value = !waiverShownOnDisplay.value
+  if (waiverShownOnDisplay.value) {
+    sendDisplayMessage({
+      type: 'SHOW_WAIVER_QR',
+      active: true,
+      waiver_url: waiverPublicUrl.value,
+      cashier_name: auth.user?.name || 'Kasir'
+    })
+  } else {
+    broadcastCart()
+  }
+}
+
 function openCustomerDisplay() {
   window.open('/customer-display', 'CustomerFacingDisplay', 'width=1024,height=768')
-  setTimeout(broadcastCart, 800)
+  setTimeout(() => {
+    if (waiverShownOnDisplay.value) {
+      sendDisplayMessage({
+        type: 'SHOW_WAIVER_QR',
+        active: true,
+        waiver_url: waiverPublicUrl.value,
+        cashier_name: auth.user?.name || 'Kasir'
+      })
+    } else {
+      broadcastCart()
+    }
+  }, 800)
 }
 
 function printReceipt() {
   window.print()
 }
 
-watch([cart, member, paymentMethod, showPayment], broadcastCart, { deep: true })
+watch([cart, member, appliedVoucher, paymentMethod, showPayment], broadcastCart, { deep: true })
 
 onMounted(() => {
   if ('BroadcastChannel' in window) channel = new BroadcastChannel('pos_customer_display')

@@ -37,7 +37,7 @@
         </router-link>
 
         <button
-          v-if="section === 'bookings' || section === 'registrations'"
+          v-if="section === 'bookings'"
           type="button"
           class="pt-btn-outline"
           @click="showBookingModal = true"
@@ -47,6 +47,16 @@
           </svg>
           <span>Tambah Booking</span>
         </button>
+
+        <a
+          v-if="section === 'registrations'"
+          href="/waiver"
+          target="_blank"
+          rel="noopener"
+          class="pt-btn-outline text-decoration-none"
+        >
+          <span>Buka Form Waiver Publik (/waiver) ↗</span>
+        </a>
 
         <button
           type="button"
@@ -119,38 +129,184 @@
       </div>
     </div>
 
-    <!-- 2. ITEM SALES REPORT -->
-    <div v-else-if="section === 'items'" class="pt-panel">
-      <div class="pt-panel-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold text-dark">Ringkasan Penjualan per Produk</span>
-        <span class="pt-tag">{{ sysData.item_sales.length }} Item</span>
+    <!-- 2. ITEM SALES REPORT (Poin 8: Laporan Penjualan Masing-Masing Item Menu Per Hari) -->
+    <template v-else-if="section === 'items'">
+      <!-- 4 Kartu Ringkasan Penjualan Item Harian -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted small fw-medium mb-1">
+              Total Item Terjual ({{ itemSalesMode === 'all' ? 'Semua Waktu' : itemSalesDate }})
+            </div>
+            <div class="pt-stat-val text-dark">{{ itemSalesSummary.total_qty }} Item</div>
+            <div class="text-muted mt-1" style="font-size: 11.5px;">
+              {{ itemSalesSummary.sold_products_count }} dari {{ sysData.item_sales.length }} menu aktif terjual
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted small fw-medium mb-1">Omset Tiket &amp; Paket Playground</div>
+            <div class="pt-stat-val text-primary">{{ rupiah(itemSalesSummary.playground_revenue) }}</div>
+            <div class="text-muted mt-1" style="font-size: 11.5px;">
+              {{ itemSalesSummary.playground_qty }} tiket/paket terjual
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted small fw-medium mb-1">Omset Menu Cafe F&amp;B</div>
+            <div class="pt-stat-val" style="color: #d97706;">{{ rupiah(itemSalesSummary.cafe_revenue) }}</div>
+            <div class="text-muted mt-1" style="font-size: 11.5px;">
+              {{ itemSalesSummary.cafe_qty }} porsi/item cafe terjual
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="pt-stat-card">
+            <div class="text-muted small fw-medium mb-1">Total Pendapatan Menu</div>
+            <div class="pt-stat-val text-success">{{ rupiah(itemSalesSummary.total_revenue) }}</div>
+            <div class="text-muted mt-1" style="font-size: 11.5px;">
+              Periode: {{ itemSalesMode === 'all' ? 'Akumulasi Semua Waktu' : `Harian (${itemSalesDate})` }}
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="table-responsive">
-        <table class="table pt-table align-middle mb-0">
-          <thead>
-            <tr>
-              <th>Kode SKU</th>
-              <th>Nama Produk / Paket</th>
-              <th>Kategori Unit</th>
-              <th> Terjual</th>
-              <th class="text-end">Total Pendapatan</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="sysData.item_sales.length === 0">
-              <td colspan="5" class="text-center text-muted py-4">Belum ada data penjualan produk.</td>
-            </tr>
-            <tr v-for="it in sysData.item_sales" :key="it.id">
-              <td class="font-monospace text-muted">{{ it.sku }}</td>
-              <td class="fw-semibold text-dark">{{ it.name }}</td>
-              <td><span class="pt-tag">{{ it.unit_name }}</span></td>
-              <td class="fw-medium">{{ it.total_qty }} item</td>
-              <td class="text-end fw-semibold text-dark">{{ rupiah(it.total_revenue) }}</td>
-            </tr>
-          </tbody>
-        </table>
+
+      <div class="pt-panel">
+        <!-- Filter Bar Harian & Kategori -->
+        <div class="pt-panel-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="fw-semibold text-dark">Laporan Penjualan Masing-Masing Item Menu</span>
+            <span class="pt-tag">{{ filteredItemSales.length }} Menu Ditampilkan</span>
+          </div>
+
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Pemilih Tanggal Harian -->
+            <div class="input-group input-group-sm" style="width: auto;">
+              <span class="input-group-text bg-light text-secondary fw-semibold">Tanggal</span>
+              <input
+                v-model="itemSalesDate"
+                type="date"
+                class="form-control form-control-sm"
+                style="width: 145px;"
+                @change="selectDailyItemSalesDate"
+              >
+              <button
+                type="button"
+                class="btn btn-sm"
+                :class="itemSalesMode === 'daily' && itemSalesDate === todayDateStr ? 'btn-primary' : 'btn-outline-secondary'"
+                @click="setItemSalesToday"
+              >
+                Hari Ini
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                :class="itemSalesMode === 'all' ? 'btn-primary' : 'btn-outline-secondary'"
+                @click="setItemSalesAllTime"
+              >
+                Semua Waktu
+              </button>
+            </div>
+
+            <!-- Filter Kategori Unit -->
+            <select
+              v-model="itemSalesCategory"
+              class="form-select form-select-sm"
+              style="width: auto; min-width: 165px;"
+            >
+              <option value="ALL">Semua Kategori Menu</option>
+              <option value="PLAYGROUND">Tiket &amp; Paket Playground</option>
+              <option value="CAFE">Menu Cafe F&amp;B</option>
+            </select>
+
+            <!-- Pencarian Nama / SKU -->
+            <input
+              v-model.trim="itemSalesSearch"
+              type="text"
+              class="form-control form-control-sm"
+              style="width: 180px;"
+              placeholder="Cari nama menu / SKU..."
+            >
+
+            <!-- Checkbox Sembunyikan 0 Terjual -->
+            <div class="form-check form-switch m-0 ms-1 d-flex align-items-center gap-1">
+              <input
+                id="hideZeroItemSwitch"
+                v-model="hideZeroItemSales"
+                class="form-check-input m-0"
+                type="checkbox"
+              >
+              <label class="form-check-label small text-secondary ms-1" for="hideZeroItemSwitch" style="font-size: 12px; cursor: pointer;">
+                Hanya Terjual (&gt;0)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table pt-table align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Kode SKU</th>
+                <th>Nama Item Menu / Paket</th>
+                <th>Kategori Unit</th>
+                <th class="text-end">Harga Satuan</th>
+                <th class="text-center">Jml Transaksi</th>
+                <th class="text-center">Qty Terjual</th>
+                <th class="text-end">Total Pendapatan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="filteredItemSales.length === 0">
+                <td colspan="7" class="text-center text-muted py-4">
+                  Tidak ada data item menu yang sesuai dengan filter pada periode ini.
+                </td>
+              </tr>
+              <tr v-for="it in filteredItemSales" :key="it.id">
+                <td class="font-monospace text-muted">{{ it.sku }}</td>
+                <td class="fw-semibold text-dark">{{ it.name }}</td>
+                <td>
+                  <span
+                    class="badge"
+                    :style="it.category_group === 'CAFE'
+                      ? 'background-color: #fef3c7; color: #b45309; font-weight: 600;'
+                      : 'background-color: #e0f2fe; color: #0369a1; font-weight: 600;'"
+                  >
+                    {{ it.unit_name }}
+                  </span>
+                </td>
+                <td class="text-end text-secondary">{{ rupiah(it.base_price) }}</td>
+                <td class="text-center text-muted">{{ it.total_orders || 0 }} trx</td>
+                <td class="text-center">
+                  <span
+                    class="badge rounded-pill px-2 py-1"
+                    :class="Number(it.total_qty) > 0 ? 'bg-success-subtle text-success fw-bold' : 'bg-light text-muted'"
+                  >
+                    {{ it.total_qty || 0 }} item
+                  </span>
+                </td>
+                <td class="text-end fw-semibold" :class="Number(it.total_revenue) > 0 ? 'text-dark' : 'text-muted'">
+                  {{ rupiah(it.total_revenue) }}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot v-if="filteredItemSales.length > 0" class="table-light">
+              <tr>
+                <td colspan="5" class="fw-bold text-end text-dark">TOTAL PERIODE INI:</td>
+                <td class="text-center fw-bold text-dark">
+                  {{ filteredItemSales.reduce((acc, it) => acc + (Number(it.total_qty) || 0), 0) }} item
+                </td>
+                <td class="text-end fw-bold text-success">
+                  {{ rupiah(filteredItemSales.reduce((acc, it) => acc + (Number(it.total_revenue) || 0), 0)) }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
-    </div>
+    </template>
 
     <!-- 3. ACCESS LOGS & VISITORS REPORT -->
     <template v-else-if="section === 'access_logs' || section === 'visitors_report'">
@@ -292,8 +448,8 @@
       </div>
     </div>
 
-    <!-- 5. BOOKINGS & ONLINE REGISTRATIONS -->
-    <div v-else-if="section === 'bookings' || section === 'registrations'" class="pt-panel">
+    <!-- 5A. BOOKINGS ROMBONGAN & ULANG TAHUN -->
+    <div v-else-if="section === 'bookings'" class="pt-panel">
       <div class="pt-panel-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold text-dark">Daftar Reservasi &amp; Booking Rombongan</span>
         <span class="pt-tag">{{ bookings.length }} Jadwal</span>
@@ -326,6 +482,65 @@
               <td class="fw-semibold text-dark">{{ rupiah(b.total) }}</td>
               <td class="text-end">
                 <span class="pt-status-badge allowed">{{ b.status.toUpperCase() }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 5B. REGISTRASI & WAIVER ONLINE (Poin 15, 16, 17) -->
+    <div v-else-if="section === 'registrations'" class="pt-panel">
+      <div class="pt-panel-header d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <span class="fw-semibold text-dark">Daftar Registrasi &amp; Waiver Online Pengunjung</span>
+          <span class="badge" style="background-color: #e0f2fe; color: #0284c7; font-size: 11px;">Tersimpan Permanen (1x Isi)</span>
+        </div>
+        <span class="pt-tag">{{ waiversList.length }} Keluarga Terdaftar</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table pt-table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Kode Waiver (QR)</th>
+              <th>Nama Orang Tua / Wali</th>
+              <th>No. WhatsApp / HP</th>
+              <th>Daftar Nama Anak &amp; Umur (Tampil di Timer)</th>
+              <th>Terakhir Diperbarui</th>
+              <th class="text-end">Aksi / Manajemen Anak</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="waiversList.length === 0">
+              <td colspan="6" class="text-center text-muted py-4">
+                Belum ada pengunjung yang mengisi Form Waiver Online (<code>/waiver</code>).
+              </td>
+            </tr>
+            <tr v-for="w in waiversList" :key="w.id">
+              <td class="font-monospace fw-bold text-primary">{{ w.registration_code }}</td>
+              <td class="fw-semibold text-dark">{{ w.parent_name }}</td>
+              <td class="font-monospace">{{ w.phone }}</td>
+              <td>
+                <div class="d-flex flex-wrap gap-1">
+                  <span
+                    v-for="(ch, idx) in w.children"
+                    :key="idx"
+                    class="pt-tag"
+                  >
+                    {{ ch.name }} ({{ ch.age }} Thn)
+                  </span>
+                </div>
+              </td>
+              <td class="text-muted">{{ fmtDateTime(w.updated_at || w.created_at) }}</td>
+              <td class="text-end">
+                <button
+                  type="button"
+                  class="pt-btn-outline"
+                  style="padding: 4px 10px; font-size: 12px;"
+                  @click="openWaiverChildrenModal(w)"
+                >
+                  Kelola / + Anak
+                </button>
               </td>
             </tr>
           </tbody>
@@ -689,6 +904,87 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Kelola Anak & Data Waiver Online -->
+    <div v-if="showWaiverModal" class="pt-modal-backdrop">
+      <div class="pt-panel" style="max-width: 520px; width: 100%;">
+        <div class="pt-panel-header d-flex justify-content-between align-items-center">
+          <div>
+            <span class="fw-semibold text-dark">Kelola Data Anak &amp; Waiver</span>
+            <span class="badge bg-primary-subtle text-primary font-monospace ms-2">{{ waiverEditForm.registration_code }}</span>
+          </div>
+          <button type="button" class="btn-close btn-sm" @click="showWaiverModal = false" />
+        </div>
+        <div class="p-3">
+          <div class="row g-2 mb-3">
+            <div class="col-7">
+              <label class="form-label small fw-semibold">Nama Orang Tua / Wali</label>
+              <input v-model.trim="waiverEditForm.parent_name" type="text" class="form-control form-control-sm">
+            </div>
+            <div class="col-5">
+              <label class="form-label small fw-semibold">No. WhatsApp / HP</label>
+              <input v-model.trim="waiverEditForm.phone" type="text" class="form-control form-control-sm">
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="form-label small fw-semibold m-0">Daftar Anak &amp; Umur (Tampil di Kasir &amp; Timer)</label>
+            <button
+              type="button"
+              class="btn btn-xs btn-outline-primary py-0 px-2 fw-semibold"
+              style="font-size: 11.5px; border-radius: 99px;"
+              @click="addWaiverEditChild"
+            >
+              + Tambah Anak
+            </button>
+          </div>
+
+          <div
+            v-for="(ch, idx) in waiverEditForm.children"
+            :key="idx"
+            class="d-flex gap-2 align-items-center mb-2"
+          >
+            <input
+              v-model.trim="ch.name"
+              type="text"
+              class="form-control form-control-sm"
+              :placeholder="`Nama Anak #${idx + 1}`"
+            >
+            <div class="input-group input-group-sm" style="max-width: 115px;">
+              <input
+                v-model.number="ch.age"
+                type="number"
+                min="1"
+                max="17"
+                class="form-control text-center"
+              >
+              <span class="input-group-text">Thn</span>
+            </div>
+            <button
+              v-if="waiverEditForm.children.length > 1"
+              type="button"
+              class="btn btn-sm btn-outline-danger py-1 px-2"
+              title="Hapus anak"
+              @click="waiverEditForm.children.splice(idx, 1)"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+            <button type="button" class="pt-btn-outline" @click="showWaiverModal = false">Batal</button>
+            <button
+              type="button"
+              class="pt-btn-primary"
+              :disabled="saving"
+              @click="saveWaiverChildren"
+            >
+              {{ saving ? 'Menyimpan...' : 'Simpan Data Anak' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -764,6 +1060,7 @@ const feedback = ref(null)
 const orders = ref([])
 const accessLogs = ref([])
 const bookings = ref([])
+const waiversList = ref([])
 const logSearch = ref('')
 const logDirFilter = ref('ALL')
 const logStatusFilter = ref('ALL')
@@ -800,6 +1097,94 @@ const sysData = reactive({
   item_sales: []
 })
 
+// Poin 8: State Laporan Penjualan Masing-Masing Item Menu Per Hari
+const todayDateStr = new Date().toISOString().slice(0, 10)
+const itemSalesDate = ref(todayDateStr)
+const itemSalesMode = ref('daily') // 'daily' | 'all'
+const itemSalesCategory = ref('ALL') // 'ALL' | 'PLAYGROUND' | 'CAFE'
+const itemSalesSearch = ref('')
+const hideZeroItemSales = ref(false)
+
+const filteredItemSales = computed(() => {
+  return (sysData.item_sales || []).filter(it => {
+    const grp = it.category_group || (String(it.unit_name || '').toLowerCase().includes('cafe') ? 'CAFE' : 'PLAYGROUND')
+    if (itemSalesCategory.value !== 'ALL' && grp !== itemSalesCategory.value) return false
+    if (hideZeroItemSales.value && (Number(it.total_qty) || 0) <= 0) return false
+    if (itemSalesSearch.value) {
+      const q = itemSalesSearch.value.toLowerCase()
+      const matchName = String(it.name || '').toLowerCase().includes(q)
+      const matchSku = String(it.sku || '').toLowerCase().includes(q)
+      if (!matchName && !matchSku) return false
+    }
+    return true
+  })
+})
+
+const itemSalesSummary = computed(() => {
+  const list = sysData.item_sales || []
+  let total_qty = 0
+  let total_revenue = 0
+  let playground_qty = 0
+  let playground_revenue = 0
+  let cafe_qty = 0
+  let cafe_revenue = 0
+  let sold_products_count = 0
+
+  for (const it of list) {
+    const qty = Number(it.total_qty) || 0
+    const rev = Number(it.total_revenue) || 0
+    const grp = it.category_group || (String(it.unit_name || '').toLowerCase().includes('cafe') ? 'CAFE' : 'PLAYGROUND')
+    total_qty += qty
+    total_revenue += rev
+    if (qty > 0) sold_products_count += 1
+    if (grp === 'CAFE') {
+      cafe_qty += qty
+      cafe_revenue += rev
+    } else {
+      playground_qty += qty
+      playground_revenue += rev
+    }
+  }
+
+  return {
+    total_qty,
+    total_revenue,
+    playground_qty,
+    playground_revenue,
+    cafe_qty,
+    cafe_revenue,
+    sold_products_count
+  }
+})
+
+async function loadItemSales() {
+  try {
+    const dateParam = itemSalesMode.value === 'all' ? 'all' : (itemSalesDate.value || todayDateStr)
+    const res = await api(`/admin/item-sales?date=${encodeURIComponent(dateParam)}`)
+    if (res.success && res.data?.items) {
+      sysData.item_sales = res.data.items
+    }
+  } catch (err) {
+    feedback.value = { type: 'danger', text: err.message }
+  }
+}
+
+function selectDailyItemSalesDate() {
+  itemSalesMode.value = 'daily'
+  loadItemSales()
+}
+
+function setItemSalesToday() {
+  itemSalesDate.value = todayDateStr
+  itemSalesMode.value = 'daily'
+  loadItemSales()
+}
+
+function setItemSalesAllTime() {
+  itemSalesMode.value = 'all'
+  loadItemSales()
+}
+
 const showBookingModal = ref(false)
 const bookingForm = reactive({
   customer_name: '',
@@ -809,18 +1194,71 @@ const bookingForm = reactive({
   total: 1500000
 })
 
+const showWaiverModal = ref(false)
+const waiverEditForm = reactive({
+  id: null,
+  registration_code: '',
+  parent_name: '',
+  phone: '',
+  children: []
+})
+
+function openWaiverChildrenModal(w) {
+  waiverEditForm.id = w.id
+  waiverEditForm.registration_code = w.registration_code
+  waiverEditForm.parent_name = w.parent_name || ''
+  waiverEditForm.phone = w.phone || ''
+  waiverEditForm.children = Array.isArray(w.children) && w.children.length > 0
+    ? w.children.map(c => ({ name: c.name, age: Number(c.age) || 5 }))
+    : [{ name: '', age: 5 }]
+  showWaiverModal.value = true
+}
+
+function addWaiverEditChild() {
+  waiverEditForm.children.push({ name: '', age: 5 })
+}
+
+async function saveWaiverChildren() {
+  const validChildren = waiverEditForm.children.filter(c => String(c.name || '').trim().length > 0)
+  if (validChildren.length === 0) {
+    feedback.value = { type: 'danger', text: 'Minimal 1 nama anak wajib diisi.' }
+    return
+  }
+  saving.value = true
+  try {
+    const res = await api(`/waivers/${waiverEditForm.id}`, {
+      method: 'PUT',
+      body: {
+        parent_name: waiverEditForm.parent_name,
+        phone: waiverEditForm.phone,
+        children: validChildren
+      }
+    })
+    showWaiverModal.value = false
+    feedback.value = { type: 'success', text: res.message || 'Data anak pada Waiver berhasil diperbarui.' }
+    await loadAll()
+  } catch (err) {
+    feedback.value = { type: 'danger', text: err.message }
+  } finally {
+    saving.value = false
+  }
+}
+
 async function loadAll() {
   loading.value = true
   try {
-    const [txRes, logRes, bookRes, sysRes] = await Promise.all([
+    const dateParam = itemSalesMode.value === 'all' ? 'all' : (itemSalesDate.value || todayDateStr)
+    const [txRes, logRes, bookRes, sysRes, wavRes] = await Promise.all([
       api('/transactions'),
       api('/simulator/logs'),
       api('/admin/bookings'),
-      api('/admin/system-data')
+      api(`/admin/system-data?date=${encodeURIComponent(dateParam)}`),
+      api('/waivers').catch(() => ({ success: false }))
     ])
     if (txRes.success) orders.value = txRes.data || []
     if (logRes.success) accessLogs.value = logRes.data || []
     if (bookRes.success) bookings.value = bookRes.data || []
+    if (wavRes.success) waiversList.value = wavRes.data || []
     if (sysRes.success && sysRes.data) {
       sysData.outlets = sysRes.data.outlets || []
       sysData.gates = sysRes.data.gates || []
@@ -917,20 +1355,24 @@ function handleExport() {
       downloadCsv('Playtopia-Laporan-Transaksi', headers, rows)
       feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} data transaksi ke file CSV!` }
     } else if (section.value === 'items') {
-      if (sysData.item_sales.length === 0) {
+      if (filteredItemSales.value.length === 0) {
         feedback.value = { type: 'danger', text: 'Tidak ada data penjualan item untuk diekspor.' }
         return
       }
-      const headers = ['SKU Produk', 'Nama Produk / Paket', 'Kategori Unit', 'Qty Terjual', 'Total Pendapatan (Rp)']
-      const rows = sysData.item_sales.map(it => [
+      const periodLabel = itemSalesMode.value === 'all' ? 'Semua-Waktu' : itemSalesDate.value
+      const headers = ['Periode / Tanggal', 'SKU Produk', 'Nama Item Menu / Paket', 'Kategori Unit', 'Harga Satuan (Rp)', 'Jumlah Transaksi', 'Qty Terjual', 'Total Pendapatan (Rp)']
+      const rows = filteredItemSales.value.map(it => [
+        periodLabel,
         it.sku,
         it.name,
         it.unit_name,
+        it.base_price || 0,
+        it.total_orders || 0,
         it.total_qty || 0,
         it.total_revenue || 0
       ])
-      downloadCsv('Playtopia-Penjualan-Item', headers, rows)
-      feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} data produk ke file CSV!` }
+      downloadCsv(`Playtopia-Penjualan-Item-${periodLabel}`, headers, rows)
+      feedback.value = { type: 'success', text: `Berhasil mengekspor ${rows.length} data item menu (${periodLabel}) ke file CSV!` }
     } else if (['access_logs', 'visitors_report'].includes(section.value)) {
       if (filteredAccessLogs.value.length === 0) {
         feedback.value = { type: 'danger', text: 'Tidak ada log aktivitas scan gate untuk diekspor.' }

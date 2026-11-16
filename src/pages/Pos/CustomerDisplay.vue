@@ -39,6 +39,21 @@
           </p>
         </div>
 
+        <!-- Kotak Scan QR Form Waiver Online di Layar Pelanggan -->
+        <div class="idle-waiver-box">
+          <div class="idle-waiver-qr-wrap">
+            <QrImage :value="waiverUrl" :size="112" alt="QR Form Waiver Online" />
+          </div>
+          <div class="idle-waiver-info">
+            <div class="idle-waiver-badge">REGISTRASI &amp; FORM WAIVER ONLINE</div>
+            <div class="idle-waiver-title">Belum Terdaftar? Scan QR Ini dari HP Anda</div>
+            <div class="idle-waiver-sub">
+              Isi <strong>Nama Orang Tua &amp; Nama Anak</strong> cukup <strong>1 kali saja</strong> (permanen). Sebutkan No. HP atau tunjukkan QR ke kasir.
+            </div>
+            <div class="idle-waiver-url">{{ waiverUrl }}</div>
+          </div>
+        </div>
+
         <div class="idle-features">
           <div class="idle-feat-pill">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00c2cb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -85,6 +100,73 @@
           <strong class="text-light">Tunai · QRIS All Bank / E-Wallet · Kartu Debit / Kredit · Saldo Member</strong>
         </div>
       </div>
+    </main>
+
+    <!-- ════════════════════════════════════════
+         STATE WAIVER_QR: TAMPILAN PENUH QR FORM WAIVER ONLINE
+    ════════════════════════════════════════ -->
+    <main v-else-if="state === 'WAIVER_QR'" class="state-container state-qris">
+      <!-- Kolom Kiri: Panduan Pengisian Form Waiver -->
+      <section class="cfd-panel qris-summary-panel d-flex flex-column justify-content-between">
+        <div>
+          <div class="panel-header-clean mb-4">
+            <span class="badge-qris-method">REGISTRASI &amp; WAIVER ONLINE</span>
+          </div>
+
+          <h2 class="text-white fw-bold mb-2" style="font-size: 26px; line-height: 1.25;">
+            Isi Data Anak &amp; Persetujuan Waiver
+          </h2>
+          <p class="text-muted mb-4" style="font-size: 13.5px; line-height: 1.55;">
+            Cukup diisi <strong class="text-info">1 kali saja</strong> dari HP Anda. Untuk kunjungan berikutnya, data Anda otomatis tersimpan di sistem kasir.
+          </p>
+
+          <div class="qris-specs-list">
+            <div class="qris-spec-item">
+              <span class="spec-label">1. Scan QR Code</span>
+              <span class="spec-val text-white">Gunakan Kamera HP / Browser</span>
+            </div>
+            <div class="qris-spec-item">
+              <span class="spec-label">2. Isi Data Singkat</span>
+              <span class="spec-val text-white">Nama Orang Tua, HP &amp; Nama Anak</span>
+            </div>
+            <div class="qris-spec-item">
+              <span class="spec-label">3. Centang Kotak</span>
+              <span class="spec-val text-info fw-semibold">Setuju Syarat &amp; Ketentuan</span>
+            </div>
+            <div class="qris-spec-item">
+              <span class="spec-label">4. Selesai</span>
+              <span class="spec-val text-white">Sebutkan No. HP / Scan QR ke Kasir</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="qris-security-badge">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          <span>Data Tersimpan Permanen · Tidak Perlu Isi Ulang</span>
+        </div>
+      </section>
+
+      <!-- Kolom Kanan: QR Code Form Waiver Online Besar -->
+      <section class="cfd-panel qris-code-panel d-flex flex-column align-items-center justify-content-center text-center">
+        <div class="qris-instruction-title">
+          Scan QR Code ini menggunakan HP Anda untuk membuka Form Waiver Online
+        </div>
+
+        <div class="qris-qr-wrapper">
+          <QrImage :value="waiverUrl" :size="250" alt="QR Form Waiver Online Playtopia" />
+        </div>
+
+        <div class="qris-supported-wallets mt-3 font-monospace text-info fw-semibold" style="font-size: 14px;">
+          {{ waiverUrl }}
+        </div>
+
+        <div class="qris-waiting-status mt-3">
+          <span class="waiting-dot" />
+          <span>Silakan scan QR di atas melalui perangkat HP masing-masing</span>
+        </div>
+      </section>
     </main>
 
     <!-- ════════════════════════════════════════
@@ -340,7 +422,7 @@ import QrImage from '@/components/PosLayout/QrImage.vue'
 import PlaytopiaLogo from '@/assets/playtopia-logo.png'
 
 // State
-const state = ref('IDLE') // IDLE | CART | SUCCESS
+const state = ref('IDLE') // IDLE | CART | WAIVER_QR | SUCCESS
 const items = ref([])
 const customerName = ref('')
 const memberBalance = ref(null)
@@ -352,6 +434,9 @@ const voucherDiscount = ref(0)
 const paymentMethod = ref(null)
 const qrisData = ref(null)
 const cashierName = ref('')
+const customWaiverUrl = ref('')
+
+const waiverUrl = computed(() => customWaiverUrl.value || `${window.location.origin}/waiver`)
 
 // Payment result
 const successCashGiven = ref(null)
@@ -417,7 +502,12 @@ function goIdle() {
 function handleMessage({ data }) {
   if (!data) return
 
-  if (data.type === 'UPDATE_CART') {
+  if (data.type === 'SHOW_WAIVER_QR') {
+    clearTimeout(idleTimer)
+    if (data.waiver_url) customWaiverUrl.value = data.waiver_url
+    cashierName.value = data.cashier_name || cashierName.value || 'Kasir'
+    state.value = data.active ? 'WAIVER_QR' : (items.value.length > 0 ? 'CART' : 'IDLE')
+  } else if (data.type === 'UPDATE_CART') {
     clearTimeout(idleTimer)
     items.value = data.items || []
     customerName.value = data.customer_name || ''
@@ -453,6 +543,17 @@ onMounted(() => {
   if ('BroadcastChannel' in window) {
     channel = new BroadcastChannel('pos_customer_display')
     channel.onmessage = handleMessage
+  }
+
+  // Load initial state from storage if recent
+  try {
+    const raw = localStorage.getItem('playtopia_pos_display_sync')
+    if (raw) {
+      const payload = JSON.parse(raw)
+      handleMessage({ data: payload })
+    }
+  } catch {
+    // ignore
   }
 
   // Storage fallback
@@ -663,6 +764,62 @@ onUnmounted(() => {
   color: #94a3b8;
   line-height: 1.6;
   max-width: 440px;
+}
+
+.idle-waiver-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(2, 132, 199, 0.1);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 14px 0;
+}
+
+.idle-waiver-qr-wrap {
+  background: #ffffff;
+  padding: 6px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.idle-waiver-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.idle-waiver-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #38bdf8;
+  text-transform: uppercase;
+}
+
+.idle-waiver-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.25;
+}
+
+.idle-waiver-sub {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.idle-waiver-url {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #38bdf8;
+  font-weight: 600;
 }
 
 .idle-features {

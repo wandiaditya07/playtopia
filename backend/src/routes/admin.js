@@ -520,19 +520,66 @@ router.put('/products/:id', requireRole('Admin', 'Client'), async (req, res) => 
   }
 });
 
+function encodeMemberWithChildren(parentName, children) {
+  const p = String(parentName || '').replace(/\|\|/g, '-').trim();
+  const childPart = (children || [])
+    .map(c => `${String(c.name || '').replace(/[:|,]/g, ' ').trim()}:${Math.max(1, Math.min(18, Number(c.age) || 5))}`)
+    .filter(Boolean)
+    .join(', ');
+  const combined = childPart ? `${p} || ${childPart}` : p;
+  return combined.slice(0, 120);
+}
+
+function parseWaiverRowChildren(row) {
+  if (!row) return [];
+  const rawGuest = String(row.guest_name || '').trim();
+  if (rawGuest.includes('||')) {
+    const [, cPart] = rawGuest.split('||');
+    if (cPart) {
+      return cPart
+        .split(',')
+        .map(item => {
+          const [n, a] = String(item || '').trim().split(':');
+          const name = String(n || '').trim();
+          const age = Math.max(1, Math.min(18, Number(a) || 5));
+          return name ? { name, age } : null;
+        })
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
 // Members & Promo
 router.get('/members-promo', async (req, res) => {
   try {
     const [members] = await pool.query(`
       SELECT m.*, m.name AS full_name, m.balance AS wallet_balance,
+             COALESCE(m.expires_on, DATE(DATE_ADD(m.created_at, INTERVAL 3 MONTH))) AS expires_on,
              mc.card_uid, mc.status AS card_status,
-             COALESCE(p.name, 'Reguler') AS tier_name,
-             COALESCE(p.discount_percent, 10) AS discount_percent
+             COALESCE(p.name, 'Member Swipe') AS tier_name,
+             20 AS playground_discount_pct,
+             10 AS cafe_discount_pct,
+             20 AS discount_percent
       FROM members m
       LEFT JOIN member_cards mc ON mc.member_id = m.id AND mc.status = 'active'
       LEFT JOIN membership_plans p ON m.plan_id = p.id
       ORDER BY m.id DESC
     `);
+    const [waiverRows] = await pool.query('SELECT * FROM online_registrations ORDER BY id DESC');
+    const waiverByPhone = new Map();
+    for (const w of waiverRows) {
+      const ph = String(w.phone || '').trim();
+      if (ph && !waiverByPhone.has(ph)) {
+        waiverByPhone.set(ph, w);
+      }
+    }
+    for (const m of members) {
+      const w = waiverByPhone.get(String(m.phone || '').trim());
+      m.children = w ? parseWaiverRowChildren(w) : [];
+      m.waiver_code = w ? w.registration_code : null;
+    }
+
     const [cards] = await pool.query(`
       SELECT mc.id, mc.member_id, mc.card_uid, mc.status, mc.issued_at, mc.blocked_at, mc.created_at,
              m.member_code, m.name AS member_name, m.phone AS member_phone, m.balance AS wallet_balance,
@@ -568,6 +615,13 @@ router.post('/members', async (req, res) => {
     const email = String(req.body?.email || '').trim() || null;
     const cardUid = String(req.body?.card_uid || '').trim();
     const initialBalance = Math.max(0, Number(req.body?.initial_balance) || 0);
+    const rawChildren = Array.isArray(req.body?.children) ? req.body.children : [];
+    const cleanChildren = rawChildren
+      .map(c => ({
+        name: String(c?.name || '').trim(),
+        age: Math.max(1, Math.min(18, Number(c?.age) || 5))
+      }))
+      .filter(c => c.name.length > 0);
 
     if (!name || !phone) {
       return res.status(400).json({ success: false, message: 'Nama dan No. HP member wajib diisi.' });
@@ -576,8 +630,8 @@ router.post('/members', async (req, res) => {
     await conn.beginTransaction();
     const code = 'MBR-' + Date.now().toString().slice(-6);
     const [mInfo] = await conn.query(
-      `INSERT INTO members (member_code, name, phone, email, registered_outlet_id, balance, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
+      `INSERT INTO members (member_code, name, phone, email, registered_outlet_id, expires_on, balance, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, DATE_ADD(CURDATE(), INTERVAL 3 MONTH), ?, 'active', NOW(), NOW())`,
       [code, name, phone, email, req.user?.outlet_id || 1, initialBalance]
     );
 
@@ -588,13 +642,86 @@ router.post('/members', async (req, res) => {
         [mInfo.insertId, cardUid, mInfo.insertId]
       );
     }
+
+    if (cleanChildren.length > 0) {
+      const encodedGuest = encodeMemberWithChildren(name, cleanChildren);
+      const [existingWaiver] = await conn.query(
+        'SELECT id FROM online_registrations WHERE phone = ? ORDER BY id DESC LIMIT 1',
+        [phone]
+      );
+      if (existingWaiver.length > 0) {
+        await conn.query(
+          'UPDATE online_registrations SET guest_name = ?, email = ?, children_count = ?, updated_at = NOW() WHERE id = ?',
+          [encodedGuest, email, cleanChildren.length, existingWaiver[0].id]
+        );
+      } else {
+        const regCode = `WV-${code.replace('MBR-', '')}`;
+        await conn.query(
+          `INSERT INTO online_registrations (registration_code, outlet_id, guest_name, phone, email, visit_date, children_count, companions_count, status, created_at, updated_at)
+           VALUES (?, 1, ?, ?, ?, CURDATE(), ?, 1, 'registered', NOW(), NOW())`,
+          [regCode, encodedGuest, phone, email, cleanChildren.length]
+        );
+      }
+    }
+
     await conn.commit();
-    res.status(201).json({ success: true, message: 'Member berhasil didaftarkan!', data: { id: mInfo.insertId, member_code: code } });
+    res.status(201).json({ success: true, message: 'Member & data anak berhasil didaftarkan!', data: { id: mInfo.insertId, member_code: code } });
   } catch (error) {
     await conn.rollback();
     res.status(500).json({ success: false, message: error.message });
   } finally {
     conn.release();
+  }
+});
+
+router.put('/members/:id/children', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [mRows] = await pool.query('SELECT * FROM members WHERE id = ?', [id]);
+    if (mRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Member tidak ditemukan.' });
+    }
+    const member = mRows[0];
+    const rawChildren = Array.isArray(req.body?.children) ? req.body.children : [];
+    const cleanChildren = rawChildren
+      .map(c => ({
+        name: String(c?.name || '').trim(),
+        age: Math.max(1, Math.min(18, Number(c?.age) || 5))
+      }))
+      .filter(c => c.name.length > 0);
+
+    if (cleanChildren.length === 0) {
+      return res.status(400).json({ success: false, message: 'Minimal 1 nama anak wajib diisi.' });
+    }
+
+    const encodedGuest = encodeMemberWithChildren(member.name, cleanChildren);
+    const [existingWaiver] = await pool.query(
+      'SELECT id FROM online_registrations WHERE phone = ? ORDER BY id DESC LIMIT 1',
+      [member.phone]
+    );
+
+    if (existingWaiver.length > 0) {
+      await pool.query(
+        'UPDATE online_registrations SET guest_name = ?, children_count = ?, updated_at = NOW() WHERE id = ?',
+        [encodedGuest, cleanChildren.length, existingWaiver[0].id]
+      );
+    } else {
+      const regCode = `WV-${String(member.member_code || id).replace('MBR-', '')}-${Date.now().toString().slice(-3)}`;
+      await pool.query(
+        `INSERT INTO online_registrations (registration_code, outlet_id, guest_name, phone, email, visit_date, children_count, companions_count, status, created_at, updated_at)
+         VALUES (?, 1, ?, ?, ?, CURDATE(), ?, 1, 'registered', NOW(), NOW())`,
+        [regCode, encodedGuest, member.phone, member.email || null, cleanChildren.length]
+      );
+    }
+
+    await logAudit(req, 'UPDATE_MEMBER_CHILDREN', 'members', id, { children: cleanChildren });
+    res.json({
+      success: true,
+      message: `Daftar anak untuk member ${member.name} berhasil disimpan!`,
+      data: { children: cleanChildren }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -806,6 +933,69 @@ router.post('/bookings', async (req, res) => {
   }
 });
 
+// Helper for Daily / All-Time Item Sales Report (Point 8)
+async function getItemSalesReport(dateParam) {
+  const cleanDate = String(dateParam || '').trim();
+  const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(cleanDate);
+  const dateClause = isSpecificDate ? 'AND DATE(o.created_at) = ?' : '';
+  const params = isSpecificDate ? [cleanDate] : [];
+
+  const [rows] = await pool.query(`
+    SELECT
+      p.id,
+      p.sku,
+      p.name,
+      p.product_type,
+      p.base_price,
+      p.is_active,
+      bu.code AS unit_code,
+      bu.name AS unit_name,
+      COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS total_qty,
+      COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.line_discount ELSE 0 END), 0) AS total_discount,
+      COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.line_total ELSE 0 END), 0) AS total_revenue,
+      COUNT(DISTINCT o.id) AS total_orders
+    FROM products p
+    JOIN business_units bu ON p.business_unit_id = bu.id
+    LEFT JOIN order_items oi ON oi.product_id = p.id
+    LEFT JOIN orders o ON oi.order_id = o.id AND o.status = 'paid' ${dateClause}
+    WHERE p.sku <> 'OT-FEE'
+    GROUP BY p.id, p.sku, p.name, p.product_type, p.base_price, p.is_active, bu.code, bu.name
+    ORDER BY total_revenue DESC, total_qty DESC, p.business_unit_id ASC, p.base_price ASC
+  `, params);
+
+  return rows.map(r => ({
+    ...r,
+    base_price: Number(r.base_price) || 0,
+    total_qty: Number(r.total_qty) || 0,
+    total_discount: Number(r.total_discount) || 0,
+    total_revenue: Number(r.total_revenue) || 0,
+    total_orders: Number(r.total_orders) || 0,
+    category_group: (r.product_type === 'fnb' || String(r.unit_code || '').toUpperCase().includes('CAFE') || String(r.unit_name || '').toLowerCase().includes('cafe'))
+      ? 'CAFE'
+      : 'PLAYGROUND'
+  }));
+}
+
+// Daily Item Sales Report Endpoint (Point 8)
+router.get('/item-sales', async (req, res) => {
+  try {
+    const rawDate = String(req.query.date || '').trim();
+    const effectiveDate = rawDate === 'all'
+      ? 'all'
+      : (/^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : new Date().toISOString().slice(0, 10));
+    const items = await getItemSalesReport(effectiveDate);
+    res.json({
+      success: true,
+      data: {
+        date: effectiveDate,
+        items
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // System data
 router.get('/system-data', async (req, res) => {
   try {
@@ -818,15 +1008,7 @@ router.get('/system-data', async (req, res) => {
       LEFT JOIN users u ON al.user_id = u.id
       ORDER BY al.id DESC LIMIT 50
     `);
-    const [itemSales] = await pool.query(`
-      SELECT p.id, oi.product_name AS name, p.sku, bu.name AS unit_name, SUM(oi.quantity) AS total_qty, SUM(oi.line_total) AS total_revenue
-      FROM order_items oi
-      JOIN orders o ON oi.order_id = o.id AND o.status = 'paid'
-      LEFT JOIN products p ON oi.product_id = p.id
-      LEFT JOIN business_units bu ON p.business_unit_id = bu.id
-      GROUP BY p.id, oi.product_name, p.sku, bu.name
-      ORDER BY total_revenue DESC
-    `);
+    const itemSales = await getItemSalesReport(req.query.date || new Date().toISOString().slice(0, 10));
 
     res.json({
       success: true,

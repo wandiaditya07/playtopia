@@ -10,11 +10,25 @@ const routes = [
 
   // Publik
   { path: '/login', name: 'PosLogin', component: PosLogin, meta: { guestOnly: true } },
+  // Form Waiver Online Publik (diisi pengunjung lewat HP masing-masing, cukup 1x)
+  {
+    path: '/waiver',
+    name: 'WaiverPublic',
+    component: () => import('@/pages/Pos/WaiverPublic.vue'),
+    meta: { title: 'Form Registrasi & Waiver Bermain - Playtopia' }
+  },
   // Layar pelanggan (dual screen) hanya menerima data lewat BroadcastChannel, tanpa akses API
   {
     path: '/customer-display',
     name: 'CustomerDisplay',
     component: () => import('@/pages/Pos/CustomerDisplay.vue')
+  },
+  // Layar TV Monitor Timer Area Bermain (Poin 19)
+  {
+    path: '/timer-monitor',
+    name: 'TimerMonitor',
+    component: () => import('@/pages/Pos/TimerMonitor.vue'),
+    meta: { title: 'Monitor Timer Area Bermain' }
   },
 
   // Aplikasi Playtopia (wajib login JWT & RBAC per Grup Menu)
